@@ -26,7 +26,6 @@ __pycache__/
 # Generated signals and stems (large, reproducible)
 signals/stems/
 library/tracks/*/signals/stems/
-library/tracks/*/signals/output/
 
 # Large local source audio used for processing
 library/tracks/*/audio/source.wav
