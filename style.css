@@ -247,6 +247,14 @@ input[type="range"] {
     overscroll-behavior: contain;
   }
 
+  #hud.collapsed {
+    right: auto;
+    bottom: auto;
+    max-width: 420px;
+    max-height: none;
+    overflow: visible;
+  }
+
   .brand {
     font-size: 22px;
   }

@@ -63,7 +63,8 @@
   const flowShapeEl = document.getElementById("flowShape");
 
   const SETTINGS_KEY = "signal-design-lab-settings-v1";
-  const BUILD_VERSION = "2026-04-08a";
+  const DEFAULT_SETTINGS_URL = "signal-settings-default.json?v=20260408a";
+  const BUILD_VERSION = "2026-04-08b";
   const FONT_FAMILIES = {
     bebas: '"Bebas Neue", "Arial Narrow", sans-serif',
     monoton: '"Monoton", "Trebuchet MS", sans-serif',
@@ -81,8 +82,9 @@
 
   let mode = "letters";
   let bgVideoUrl = null;
-  let panelCollapsed = false;
+  let panelCollapsed = true;
   let glowEnabled = true;
+  let defaultSettingsLoadPromise = null;
 
   function setBuildInfo() {
     if (!buildInfoEl) return;
@@ -108,6 +110,8 @@
     }
     if (metersEl) metersEl.style.display = panelCollapsed ? "none" : "block";
   }
+
+  applyPanelCollapsedState();
 
   function setMode(nextMode) {
     mode = nextMode;
@@ -262,12 +266,42 @@
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (!raw) {
         if (showStatus) statusEl.textContent = "No saved settings found.";
-        return;
+        return false;
       }
       applySettings(JSON.parse(raw), showStatus);
+      return true;
     } catch (_err) {
       if (showStatus) statusEl.textContent = "Failed to load settings.";
+      return false;
     }
+  }
+
+  async function loadDefaultSettingsIfMissing(showStatus = false) {
+    if (loadSettings(false)) return true;
+    if (defaultSettingsLoadPromise) {
+      await defaultSettingsLoadPromise;
+      return loadSettings(showStatus);
+    }
+
+    defaultSettingsLoadPromise = (async () => {
+      try {
+        const resp = await fetch(resolveAssetUrl(DEFAULT_SETTINGS_URL));
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const parsed = await resp.json();
+        applySettings(parsed, false);
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(collectSettings()));
+      } catch (_err) {
+        // Keep running with built-in control defaults if default settings file is unavailable.
+      }
+    })();
+
+    try {
+      await defaultSettingsLoadPromise;
+    } finally {
+      defaultSettingsLoadPromise = null;
+    }
+
+    return loadSettings(showStatus);
   }
 
   function exportSettings() {
@@ -770,7 +804,10 @@
     resetMotionEffectState();
     idxHint = 0;
     populateSignalSelects();
-    loadSettings(false);
+    const hadLocalSettings = loadSettings(false);
+    if (!hadLocalSettings) {
+      void loadDefaultSettingsIfMissing(false);
+    }
     state.meterDefs = buildMeterDefs();
     renderMeters();
     applyPanelCollapsedState();
