@@ -99,6 +99,18 @@ html, body {
   margin-right: 8px;
 }
 
+.build-badge {
+  border: 1px solid rgba(81, 184, 255, 0.45);
+  background: rgba(81, 184, 255, 0.14);
+  color: #d7eeff;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
 .btn,
 .chip,
 select,

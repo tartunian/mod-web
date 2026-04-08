@@ -17,6 +17,7 @@
   const nextTrackBtn = document.getElementById("nextTrackBtn");
   const trackSelectEl = document.getElementById("trackSelect");
   const statusEl = document.getElementById("status");
+  const buildInfoEl = document.getElementById("buildInfo");
   const metersEl = document.getElementById("meters");
   const intensityEl = document.getElementById("intensity");
   const wordEl = document.getElementById("word");
@@ -61,6 +62,7 @@
   const flowShapeEl = document.getElementById("flowShape");
 
   const SETTINGS_KEY = "signal-design-lab-settings-v1";
+  const BUILD_VERSION = "2026-04-08a";
   const FONT_FAMILIES = {
     bebas: '"Bebas Neue", "Arial Narrow", sans-serif',
     monoton: '"Monoton", "Trebuchet MS", sans-serif',
@@ -80,6 +82,13 @@
   let bgVideoUrl = null;
   let panelCollapsed = false;
   let glowEnabled = true;
+
+  function setBuildInfo() {
+    if (!buildInfoEl) return;
+    buildInfoEl.textContent = `build: ${BUILD_VERSION}`;
+  }
+
+  setBuildInfo();
 
   function updateGlowButtonLabel() {
     if (!toggleGlowBtn) return;
@@ -358,6 +367,10 @@
     bgVideo.addEventListener("error", () => {
       statusEl.textContent = "Failed to decode video file.";
     });
+
+    if (bgVideo.getAttribute("src")) {
+      playBgVideoSafely();
+    }
   }
 
   if (videoFileEl) {
@@ -768,13 +781,22 @@
     return resp.json();
   }
 
+  function resolveAssetUrl(pathOrUrl) {
+    if (!pathOrUrl || typeof pathOrUrl !== "string") return "";
+    try {
+      return new URL(pathOrUrl, window.location.href).toString();
+    } catch (_err) {
+      return pathOrUrl;
+    }
+  }
+
   async function loadTrackByIndex(nextIndex, opts = {}) {
     if (!state.playlist.length) return;
     const max = state.playlist.length - 1;
     const clamped = Math.max(0, Math.min(max, nextIndex));
     const track = state.playlist[clamped];
-    if (!track || !track.signals || !track.audio) {
-      throw new Error("Playlist track is missing audio or signals path.");
+    if (!track || !track.audio) {
+      throw new Error("Playlist track is missing audio path.");
     }
 
     const token = ++state.trackLoadToken;
@@ -782,18 +804,40 @@
     state.loaded = false;
     statusEl.textContent = `Loading ${normalizeTrackTitle(track, clamped)} ...`;
 
-    const data = await fetchSignalsData(track.signals);
-    if (token !== state.trackLoadToken) return;
+    const audioUrl = resolveAssetUrl(track.audio);
+    const trackSignalsUrl = track.signals ? resolveAssetUrl(track.signals) : "";
+    const fallbackSignalsUrl = resolveAssetUrl(signalsUrl);
 
-    const oldSrc = audio.getAttribute("src") || "";
-    if (oldSrc !== track.audio) {
-      audio.src = track.audio;
+    let signalsStatusNote = "";
+    if (trackSignalsUrl) {
+      try {
+        const data = await fetchSignalsData(trackSignalsUrl);
+        if (token !== state.trackLoadToken) return;
+        applySignalsData(data);
+      } catch (_trackSignalsErr) {
+        if (!state.timeline.length) {
+          try {
+            const fallbackData = await fetchSignalsData(fallbackSignalsUrl);
+            if (token !== state.trackLoadToken) return;
+            applySignalsData(fallbackData);
+            signalsStatusNote = " Using fallback visuals.";
+          } catch (_fallbackErr) {
+            signalsStatusNote = " Visual signals unavailable.";
+          }
+        } else {
+          signalsStatusNote = " Using previous visuals.";
+        }
+      }
+    }
+
+    const oldSrc = audio.currentSrc || audio.getAttribute("src") || "";
+    if (oldSrc !== audioUrl && oldSrc !== track.audio) {
+      audio.src = audioUrl;
       audio.load();
     } else {
       audio.currentTime = 0;
     }
 
-    applySignalsData(data);
     state.currentTrackIndex = clamped;
     updateTrackControls();
     state.loaded = true;
@@ -803,12 +847,12 @@
         await audio.play();
         playBgVideoSafely();
       } catch (_err) {
-        statusEl.textContent = `Loaded ${normalizeTrackTitle(track, clamped)}. Autoplay blocked by browser.`;
+        statusEl.textContent = `Loaded ${normalizeTrackTitle(track, clamped)}. Autoplay blocked by browser.${signalsStatusNote}`;
         return;
       }
     }
 
-    statusEl.textContent = `Loaded ${normalizeTrackTitle(track, clamped)}.`;
+    statusEl.textContent = `Loaded ${normalizeTrackTitle(track, clamped)}.${signalsStatusNote}`;
   }
 
   function shiftTrack(delta) {
