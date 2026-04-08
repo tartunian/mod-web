@@ -1,6 +1,6 @@
 {
   "mode": "letters",
-  "panelCollapsed": true,
+  "panelCollapsed": false,
   "flowOverlayEnable": true,
   "flowOverlayOpacity": "0.96",
   "flowEffect": "shockwaves",
@@ -39,7 +39,9 @@
   "globalTintColor": "#61177c",
   "globalTintOpacity": "0.62",
   "masterTintEnable": true,
-  "masterTintShift": "-41",
+  "videoShift": "115",
+  "videoShiftSweepEnable": true,
+  "videoShiftSweepDiv": "64",
   "masterTintBaseGhost": "#e392fe",
   "masterTintBaseBorder": "#ff40ff",
   "masterTintBaseGlobal": "#61177c"

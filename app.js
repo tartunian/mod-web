@@ -9,7 +9,9 @@
   const globalTintColorEl = document.getElementById("globalTintColor");
   const globalTintOpacityEl = document.getElementById("globalTintOpacity");
   const masterTintEnableEl = document.getElementById("masterTintEnable");
-  const masterTintShiftEl = document.getElementById("masterTintShift");
+  const videoShiftEl = document.getElementById("videoShift");
+  const videoShiftSweepEnableEl = document.getElementById("videoShiftSweepEnable");
+  const videoShiftSweepDivEl = document.getElementById("videoShiftSweepDiv");
   const playBtn = document.getElementById("playBtn");
   const pauseBtn = document.getElementById("pauseBtn");
   const togglePanelBtn = document.getElementById("togglePanelBtn");
@@ -63,8 +65,8 @@
   const flowShapeEl = document.getElementById("flowShape");
 
   const SETTINGS_KEY = "signal-design-lab-settings-v1";
-  const DEFAULT_SETTINGS_URL = "signal-settings-default.json?v=20260408a";
-  const BUILD_VERSION = "2026-04-08b";
+  const DEFAULT_SETTINGS_URL = "signal-settings-default.json?v=20260408b";
+  const BUILD_VERSION = "2026-04-08c";
   const FONT_FAMILIES = {
     bebas: '"Bebas Neue", "Arial Narrow", sans-serif',
     monoton: '"Monoton", "Trebuchet MS", sans-serif',
@@ -165,7 +167,9 @@
       globalTintColor: globalTintColorEl && globalTintColorEl.value,
       globalTintOpacity: globalTintOpacityEl && globalTintOpacityEl.value,
       masterTintEnable: masterTintEnableEl && masterTintEnableEl.checked,
-      masterTintShift: masterTintShiftEl && masterTintShiftEl.value,
+      videoShift: videoShiftEl && videoShiftEl.value,
+      videoShiftSweepEnable: videoShiftSweepEnableEl && videoShiftSweepEnableEl.checked,
+      videoShiftSweepDiv: videoShiftSweepDivEl && videoShiftSweepDivEl.value,
       masterTintBaseGhost: base.ghostColor,
       masterTintBaseBorder: base.borderTint,
       masterTintBaseGlobal: base.globalTintColor,
@@ -207,7 +211,8 @@
       [borderFreqDivEl, settings.borderFreqDiv],
       [globalTintColorEl, settings.globalTintColor],
       [globalTintOpacityEl, settings.globalTintOpacity],
-      [masterTintShiftEl, settings.masterTintShift],
+      [videoShiftEl, settings.videoShift !== undefined ? settings.videoShift : settings.masterTintShift],
+      [videoShiftSweepDivEl, settings.videoShiftSweepDiv],
       [flowOverlayOpacityEl, settings.flowOverlayOpacity],
       [flowEffectEl, settings.flowEffect],
       [flowEffectIntensityEl, settings.flowEffectIntensity],
@@ -232,6 +237,9 @@
     }
     if (masterTintEnableEl && typeof settings.masterTintEnable === "boolean") {
       masterTintEnableEl.checked = settings.masterTintEnable;
+    }
+    if (videoShiftSweepEnableEl && typeof settings.videoShiftSweepEnable === "boolean") {
+      videoShiftSweepEnableEl.checked = settings.videoShiftSweepEnable;
     }
 
     state.masterTintBase = {
@@ -705,12 +713,32 @@
       };
     }
     if (!state.masterTintBase) captureMasterTintBaseFromCurrent();
-    const shift = Number.parseFloat(masterTintShiftEl && masterTintShiftEl.value) || 0;
+    const shift = getVideoShiftValue();
     return {
       ghostColor: shiftHexHue(state.masterTintBase.ghostColor, shift),
       borderTint: shiftHexHue(state.masterTintBase.borderTint, shift),
       globalTintColor: shiftHexHue(state.masterTintBase.globalTintColor, shift),
     };
+  }
+
+  function getVideoShiftValue() {
+    const fallback = Number.parseFloat(videoShiftEl && videoShiftEl.value) || 0;
+    const sweepEnabled = !!(videoShiftSweepEnableEl && videoShiftSweepEnableEl.checked);
+    if (!sweepEnabled || !videoShiftEl) return fallback;
+
+    const min = Number.parseFloat(videoShiftEl.min);
+    const max = Number.parseFloat(videoShiftEl.max);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return fallback;
+
+    const bpm = Math.max(60, Math.min(220, state.trackBpm || 120));
+    const div = Math.max(1, Number.parseFloat(videoShiftSweepDivEl && videoShiftSweepDivEl.value) || 8);
+    const hz = bpm / (60 * div);
+    const now = (audio && Number.isFinite(audio.currentTime)) ? audio.currentTime : performance.now() * 0.001;
+    const phase = now * hz * Math.PI * 2;
+    const normalized = 0.5 + 0.5 * Math.sin(phase);
+    const sweepShift = min + (max - min) * normalized;
+    videoShiftEl.value = sweepShift.toFixed(1);
+    return sweepShift;
   }
 
   function normalizeTrackTitle(track, i) {
