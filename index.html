@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Signal Design Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bungee+Shade&family=Chicle&family=Monoton&family=Rubik+Glitch&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=20260408a" />
+</head>
+<body>
+  <div id="hud">
+    <div class="row top">
+      <div class="brand">Signal Design Lab // PSYCH BUILD</div>
+      <button id="playBtn" class="btn">Play</button>
+      <button id="pauseBtn" class="btn ghost">Pause</button>
+      <button id="togglePanelBtn" class="btn ghost">Collapse</button>
+    </div>
+
+    <div class="row">
+      <span class="label">Mode</span>
+      <button class="chip active" data-mode="letters">Stretch Type</button>
+      <button class="chip" data-mode="flow">Flow Field</button>
+      <label class="label" for="flowOverlayEnable">Flow Overlay</label>
+      <input id="flowOverlayEnable" type="checkbox" />
+      <label class="label" for="flowOverlayOpacity">Flow Opacity</label>
+      <input id="flowOverlayOpacity" type="range" min="0" max="1" step="0.02" value="0.4" />
+      <label class="label" for="flowEffect">Motion Effect</label>
+      <select id="flowEffect">
+        <option value="flow" selected>Flow Field</option>
+        <option value="shockwaves">Beat Shockwaves</option>
+        <option value="ribbons">Ribbon Trails</option>
+        <option value="ink">Ink Diffusion</option>
+        <option value="lissajous">Lissajous Curves</option>
+        <option value="constellation">Constellation</option>
+        <option value="scanlines">Glitch Scanlines</option>
+        <option value="voronoi">Voronoi Blobs</option>
+        <option value="fog">Audio Fog</option>
+        <option value="refraction">Chromatic Refraction</option>
+        <option value="kaleidoscope">Kaleidoscope</option>
+        <option value="mesh">Wave Mesh</option>
+        <option value="caustics">Light Caustics</option>
+      </select>
+      <label class="label" for="flowEffectIntensity">Effect Intensity</label>
+      <input id="flowEffectIntensity" type="range" min="0" max="2" step="0.02" value="1" />
+      <label class="label" for="flowShape">Flow Shape</label>
+      <select id="flowShape">
+        <option value="dot" selected>Dot</option>
+        <option value="flower">Flower</option>
+        <option value="diamond">Diamond</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label class="label" for="intensity">Intensity</label>
+      <input id="intensity" type="range" min="0.4" max="2" step="0.05" value="1" />
+      <label class="label" for="word">Word</label>
+      <input id="word" type="text" maxlength="24" value="MOD" />
+      <label class="label" for="textColor">Text Color</label>
+      <input id="textColor" type="color" value="#ffffff" />
+      <label class="label" for="textFont">Text Font</label>
+      <select id="textFont">
+        <option value="bebas">Bebas Neue</option>
+        <option value="monoton">Monoton</option>
+        <option value="rubikglitch">Rubik Glitch</option>
+        <option value="bungueshade">Bungee Shade</option>
+        <option value="chicle">Chicle</option>
+      </select>
+      <label class="label" for="textSize">Text Size</label>
+      <input id="textSize" type="range" min="0.5" max="2.4" step="0.05" value="1" />
+      <label class="label" for="textX">Text X</label>
+      <input id="textX" type="range" min="-50" max="50" step="1" value="0" />
+      <label class="label" for="textY">Text Y</label>
+      <input id="textY" type="range" min="20" max="80" step="1" value="52" />
+      <button id="toggleGlowBtn" class="btn ghost">Glow On</button>
+    </div>
+
+    <div class="row">
+      <label class="label" for="outlineEnable">Outline</label>
+      <input id="outlineEnable" type="checkbox" checked />
+      <label class="label" for="outlineColor">Outline Color</label>
+      <input id="outlineColor" type="color" value="#ffffff" />
+      <label class="label" for="outlineThickness">Outline Thickness</label>
+      <input id="outlineThickness" type="range" min="0" max="16" step="0.5" value="5" />
+    </div>
+
+    <div class="row">
+      <label class="label" for="leftSignal">Left Signal</label>
+      <select id="leftSignal"></select>
+      <label class="label" for="leftGain">Left Gain</label>
+      <input id="leftGain" type="range" min="0" max="3" step="0.05" value="1" />
+    </div>
+
+    <div class="row">
+      <label class="label" for="midSignal">Mid Signal</label>
+      <select id="midSignal"></select>
+      <label class="label" for="midGain">Mid Gain</label>
+      <input id="midGain" type="range" min="0" max="3" step="0.05" value="1" />
+    </div>
+
+    <div class="row">
+      <label class="label" for="rightSignal">Right Signal</label>
+      <select id="rightSignal"></select>
+      <label class="label" for="rightGain">Right Gain</label>
+      <input id="rightGain" type="range" min="0" max="3" step="0.05" value="1" />
+      <label class="label" for="bandSpread">Band Spread</label>
+      <input id="bandSpread" type="range" min="0.14" max="0.9" step="0.01" value="0.45" />
+    </div>
+
+    <div class="row">
+      <label class="label" for="ghostSize">Ghost Size</label>
+      <input id="ghostSize" type="range" min="0.6" max="3.4" step="0.05" value="1.35" />
+      <label class="label" for="ghostColor">Ghost Color</label>
+      <input id="ghostColor" type="color" value="#66d5ff" />
+      <label class="label" for="ghostDecay">Ghost Decay</label>
+      <input id="ghostDecay" type="range" min="0.1" max="3" step="0.05" value="0.9" />
+      <label class="label" for="ghostOpacity">Ghost Opacity</label>
+      <input id="ghostOpacity" type="range" min="0" max="1.8" step="0.02" value="1" />
+      <label class="label" for="glowOpacity">Glow Opacity</label>
+      <input id="glowOpacity" type="range" min="0" max="1.8" step="0.02" value="1" />
+      <label class="label" for="ghostFill">Ghost Fill</label>
+      <input id="ghostFill" type="checkbox" />
+    </div>
+
+    <div class="row">
+      <label class="label" for="borderWidth">Border Width</label>
+      <input id="borderWidth" type="range" min="0.4" max="2.2" step="0.05" value="1" />
+      <label class="label" for="borderGain">Border Gain</label>
+      <input id="borderGain" type="range" min="0" max="3" step="0.05" value="1" />
+      <label class="label" for="borderOpacity">Border Opacity</label>
+      <input id="borderOpacity" type="range" min="0" max="1.5" step="0.02" value="1" />
+      <label class="label" for="borderTint">Border Tint</label>
+      <input id="borderTint" type="color" value="#51b8ff" />
+      <label class="label" for="borderSignal">Border Signal</label>
+      <select id="borderSignal"></select>
+      <label class="label" for="borderFreqDiv">Border Freq Div</label>
+      <select id="borderFreqDiv">
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="4">4</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label class="label" for="videoFile">BG Video</label>
+      <input id="videoFile" type="file" accept="video/*" />
+      <button id="clearVideoBtn" class="btn ghost">Clear Video</button>
+      <label class="label" for="globalTintColor">Global Tint</label>
+      <input id="globalTintColor" type="color" value="#0b2442" />
+      <label class="label" for="globalTintOpacity">Tint Opacity</label>
+      <input id="globalTintOpacity" type="range" min="0" max="1" step="0.02" value="0" />
+      <label class="label" for="masterTintEnable">Master Tint</label>
+      <input id="masterTintEnable" type="checkbox" />
+      <label class="label" for="masterTintShift">Tint Shift</label>
+      <input id="masterTintShift" type="range" min="-180" max="180" step="1" value="0" />
+    </div>
+
+    <div class="row">
+      <button id="saveSettingsBtn" class="btn">Save Settings</button>
+      <button id="loadSettingsBtn" class="btn ghost">Load Settings</button>
+      <button id="exportSettingsBtn" class="btn ghost">Export Settings</button>
+      <button id="importSettingsBtn" class="btn ghost">Import Settings</button>
+      <input id="importSettingsFile" type="file" accept="application/json" style="display:none" />
+    </div>
+
+    <div class="row small" id="status">Loading playlist ...</div>
+    <div id="meters" class="meters"></div>
+  </div>
+
+  <video id="bgVideo" muted loop playsinline preload="metadata"></video>
+  <canvas id="scene"></canvas>
+  <div id="trackBar">
+    <span class="label">Track</span>
+    <button id="prevTrackBtn" class="btn ghost">Prev</button>
+    <select id="trackSelect"></select>
+    <button id="nextTrackBtn" class="btn ghost">Next</button>
+  </div>
+  <audio id="audio" preload="auto" src="mod-demolition-live.mp3"></audio>
+  <script src="app.js?v=20260408b"></script>
+</body>
+</html>

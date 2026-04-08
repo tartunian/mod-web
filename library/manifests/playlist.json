@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "tracks": [
+    {
+      "id": "red-barron",
+      "title": "Red Barron",
+      "index": 1,
+      "audio": "library/tracks/red-barron/audio/playback.mp3",
+      "signals": "library/tracks/red-barron/signals/output/signals.json",
+      "stemsDir": "library/tracks/red-barron/signals/stems"
+    },
+    {
+      "id": "the-wind-jammer",
+      "title": "The Wind Jammer",
+      "index": 2,
+      "audio": "library/tracks/the-wind-jammer/audio/playback.mp3",
+      "signals": "library/tracks/the-wind-jammer/signals/output/signals.json",
+      "stemsDir": "library/tracks/the-wind-jammer/signals/stems"
+    },
+    {
+      "id": "cantaloupe-island",
+      "title": "Cantaloupe Island",
+      "index": 3,
+      "audio": "library/tracks/cantaloupe-island/audio/playback.mp3",
+      "signals": "library/tracks/cantaloupe-island/signals/output/signals.json",
+      "stemsDir": "library/tracks/cantaloupe-island/signals/stems"
+    },
+    {
+      "id": "jan-jan",
+      "title": "Jan Jan",
+      "index": 4,
+      "audio": "library/tracks/jan-jan/audio/playback.mp3",
+      "signals": "library/tracks/jan-jan/signals/output/signals.json",
+      "stemsDir": "library/tracks/jan-jan/signals/stems"
+    },
+    {
+      "id": "stratus",
+      "title": "Stratus",
+      "index": 5,
+      "audio": "library/tracks/stratus/audio/playback.mp3",
+      "signals": "library/tracks/stratus/signals/output/signals.json",
+      "stemsDir": "library/tracks/stratus/signals/stems"
+    }
+  ]
+}

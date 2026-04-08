@@ -1,0 +1,35 @@
+# OS files
+.DS_Store
+
+# Python environment and caches
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.python-version
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+
+# Editor/IDE files
+.idea/
+.vscode/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Generated signals and stems (large, reproducible)
+signals/stems/
+library/tracks/*/signals/stems/
+library/tracks/*/signals/output/
+
+# Large local source audio used for processing
+library/tracks/*/audio/source.wav
+
+# Local archives and exports
+archive/
