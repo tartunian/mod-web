@@ -239,7 +239,12 @@ input[type="range"] {
     left: 8px;
     top: 8px;
     right: 8px;
+    bottom: calc(68px + env(safe-area-inset-bottom));
     max-width: none;
+    max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .brand {

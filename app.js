@@ -16,6 +16,7 @@
   const prevTrackBtn = document.getElementById("prevTrackBtn");
   const nextTrackBtn = document.getElementById("nextTrackBtn");
   const trackSelectEl = document.getElementById("trackSelect");
+  const trackBarEl = document.getElementById("trackBar");
   const statusEl = document.getElementById("status");
   const buildInfoEl = document.getElementById("buildInfo");
   const metersEl = document.getElementById("meters");
@@ -1348,7 +1349,7 @@
     const textX = parseFloat(textXEl && textXEl.value) || 0;
     const textY = parseFloat(textYEl && textYEl.value) || 52;
     let x = (w - total) * 0.5 + (textX / 100) * w;
-    const y = h * (textY / 100);
+    const y = getResponsiveTextY(textY, baseSize);
     const ghostSize = parseFloat(ghostSizeEl && ghostSizeEl.value) || 1;
     const palette = getEffectiveTintPalette();
     const ghostColor = palette.ghostColor;
@@ -1471,6 +1472,19 @@
 
       x += widths[i] + 8;
     }
+  }
+
+  function getResponsiveTextY(textYPercent, baseSize) {
+    const yPct = Math.max(0, Math.min(100, Number.isFinite(textYPercent) ? textYPercent : 52));
+    const isMobile = w <= 720;
+    if (!isMobile) return h * (yPct / 100);
+
+    const trackBarHeight = trackBarEl ? trackBarEl.getBoundingClientRect().height : 52;
+    const topBound = Math.max(baseSize * 0.72, h * 0.2);
+    const bottomPadding = trackBarHeight + Math.max(18, h * 0.06);
+    const bottomBound = Math.max(topBound + 12, h - bottomPadding);
+
+    return topBound + (bottomBound - topBound) * (yPct / 100);
   }
 
   function drawFlow(s, options = {}) {
