@@ -29,6 +29,10 @@
   const textSizeEl = document.getElementById("textSize");
   const textXEl = document.getElementById("textX");
   const textYEl = document.getElementById("textY");
+  const bevelEnableEl = document.getElementById("bevelEnable");
+  const bevelDepthEl = document.getElementById("bevelDepth");
+  const bevelHighlightEl = document.getElementById("bevelHighlight");
+  const bevelShadowEl = document.getElementById("bevelShadow");
   const toggleGlowBtn = document.getElementById("toggleGlowBtn");
   const outlineEnableEl = document.getElementById("outlineEnable");
   const outlineColorEl = document.getElementById("outlineColor");
@@ -45,6 +49,7 @@
   const ghostDecayEl = document.getElementById("ghostDecay");
   const ghostOpacityEl = document.getElementById("ghostOpacity");
   const glowOpacityEl = document.getElementById("glowOpacity");
+  const ghostEnableEl = document.getElementById("ghostEnable");
   const ghostFillEl = document.getElementById("ghostFill");
   const borderWidthEl = document.getElementById("borderWidth");
   const borderGainEl = document.getElementById("borderGain");
@@ -65,8 +70,8 @@
   const flowShapeEl = document.getElementById("flowShape");
 
   const SETTINGS_KEY = "signal-design-lab-settings-v1";
-  const DEFAULT_SETTINGS_URL = "signal-settings-default.json?v=20260408b";
-  const BUILD_VERSION = "2026-04-08c";
+  const DEFAULT_SETTINGS_URL = "signal-settings-default.json?v=20260409a";
+  const BUILD_VERSION = "2026-04-09a";
   const FONT_FAMILIES = {
     bebas: '"Bebas Neue", "Arial Narrow", sans-serif',
     monoton: '"Monoton", "Trebuchet MS", sans-serif',
@@ -104,13 +109,12 @@
     if (!hudEl) return;
     hudEl.classList.toggle("collapsed", panelCollapsed);
     if (togglePanelBtn) togglePanelBtn.textContent = panelCollapsed ? "Expand" : "Collapse";
-
-    const rows = Array.from(hudEl.querySelectorAll(".row"));
-    for (const row of rows) {
-      if (row.classList.contains("top")) continue;
-      row.style.display = panelCollapsed ? "none" : "flex";
+    hudEl.style.display = panelCollapsed ? "none" : "block";
+    if (!panelCollapsed) {
+      const rows = Array.from(hudEl.querySelectorAll(".row"));
+      for (const row of rows) row.style.display = "";
+      if (metersEl) metersEl.style.display = "";
     }
-    if (metersEl) metersEl.style.display = panelCollapsed ? "none" : "block";
   }
 
   applyPanelCollapsedState();
@@ -141,6 +145,10 @@
       textSize: textSizeEl && textSizeEl.value,
       textX: textXEl && textXEl.value,
       textY: textYEl && textYEl.value,
+      bevelEnable: bevelEnableEl && bevelEnableEl.checked,
+      bevelDepth: bevelDepthEl && bevelDepthEl.value,
+      bevelHighlight: bevelHighlightEl && bevelHighlightEl.value,
+      bevelShadow: bevelShadowEl && bevelShadowEl.value,
       glowEnabled,
       outlineEnable: outlineEnableEl && outlineEnableEl.checked,
       outlineColor: outlineColorEl && outlineColorEl.value,
@@ -157,6 +165,7 @@
       ghostDecay: ghostDecayEl && ghostDecayEl.value,
       ghostOpacity: ghostOpacityEl && ghostOpacityEl.value,
       glowOpacity: glowOpacityEl && glowOpacityEl.value,
+      ghostEnable: ghostEnableEl && ghostEnableEl.checked,
       ghostFill: ghostFillEl && ghostFillEl.checked,
       borderWidth: borderWidthEl && borderWidthEl.value,
       borderGain: borderGainEl && borderGainEl.value,
@@ -193,6 +202,9 @@
       [textSizeEl, settings.textSize],
       [textXEl, settings.textX],
       [textYEl, settings.textY],
+      [bevelDepthEl, settings.bevelDepth],
+      [bevelHighlightEl, settings.bevelHighlight],
+      [bevelShadowEl, settings.bevelShadow],
       [outlineColorEl, settings.outlineColor],
       [outlineThicknessEl, settings.outlineThickness],
       [leftGainEl, settings.leftGain],
@@ -226,11 +238,17 @@
     if (ghostFillEl && typeof settings.ghostFill === "boolean") {
       ghostFillEl.checked = settings.ghostFill;
     }
+    if (ghostEnableEl && typeof settings.ghostEnable === "boolean") {
+      ghostEnableEl.checked = settings.ghostEnable;
+    }
     if (ghostColorEl && !settings.ghostColor && settings.ghostHue !== undefined && settings.ghostHue !== null) {
       ghostColorEl.value = hueToHex(settings.ghostHue);
     }
     if (outlineEnableEl && typeof settings.outlineEnable === "boolean") {
       outlineEnableEl.checked = settings.outlineEnable;
+    }
+    if (bevelEnableEl && typeof settings.bevelEnable === "boolean") {
+      bevelEnableEl.checked = settings.bevelEnable;
     }
     if (flowOverlayEnableEl && typeof settings.flowOverlayEnable === "boolean") {
       flowOverlayEnableEl.checked = settings.flowOverlayEnable;
@@ -618,6 +636,22 @@
       g: Number.parseInt(m[2], 16),
       b: Number.parseInt(m[3], 16),
     };
+  }
+
+  function shadeRgb(rgb, amount) {
+    const t = Math.max(-1, Math.min(1, Number.isFinite(amount) ? amount : 0));
+    const target = t >= 0 ? 255 : 0;
+    const mix = Math.abs(t);
+    return {
+      r: Math.round(rgb.r + (target - rgb.r) * mix),
+      g: Math.round(rgb.g + (target - rgb.g) * mix),
+      b: Math.round(rgb.b + (target - rgb.b) * mix),
+    };
+  }
+
+  function rgbToCss(rgb, alpha = 1) {
+    const a = Math.max(0, Math.min(1.5, Number.isFinite(alpha) ? alpha : 1));
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${a})`;
   }
 
   function hueToHex(hueValue) {
@@ -1347,17 +1381,6 @@
     const effectOptions = { ...options, intensity: effectIntensity };
     const effect = (flowEffectEl && flowEffectEl.value) || "flow";
     if (effect === "shockwaves") drawShockwaves(s, effectOptions);
-    else if (effect === "ribbons") drawRibbons(s, effectOptions);
-    else if (effect === "ink") drawInkDiffusion(s, effectOptions);
-    else if (effect === "lissajous") drawLissajous(s, effectOptions);
-    else if (effect === "constellation") drawConstellation(s, effectOptions);
-    else if (effect === "scanlines") drawScanlines(s, effectOptions);
-    else if (effect === "voronoi") drawVoronoiBlobs(s, effectOptions);
-    else if (effect === "fog") drawFogLayers(s, effectOptions);
-    else if (effect === "refraction") drawRefraction(s, effectOptions);
-    else if (effect === "kaleidoscope") drawKaleidoscope(s, effectOptions);
-    else if (effect === "mesh") drawWaveMesh(s, effectOptions);
-    else if (effect === "caustics") drawCaustics(s, effectOptions);
     else drawFlow(s, effectOptions);
   }
 
@@ -1405,16 +1428,25 @@
     const baseSize = Math.max(36, Math.min(360, w * 0.09 * textSize));
     const fontKey = (textFontEl && textFontEl.value) || "bebas";
     const fontFamily = FONT_FAMILIES[fontKey] || FONT_FAMILIES.bebas;
-    ctx.font = `700 ${baseSize}px ${fontFamily}`;
+    let effectiveSize = baseSize;
+    ctx.font = `700 ${effectiveSize}px ${fontFamily}`;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-
-    const widths = chars.map((c) => ctx.measureText(c).width);
-    const total = widths.reduce((a, b) => a + b, 0) + Math.max(0, chars.length - 1) * 8;
+    const letterGap = 8;
+    let widths = chars.map((c) => ctx.measureText(c).width);
+    let total = widths.reduce((a, b) => a + b, 0) + Math.max(0, chars.length - 1) * letterGap;
+    const maxTextWidth = w <= 720 ? w * 0.9 : w * 0.94;
+    if (total > maxTextWidth && total > 0) {
+      const fitScale = maxTextWidth / total;
+      effectiveSize = Math.max(16, baseSize * fitScale);
+      ctx.font = `700 ${effectiveSize}px ${fontFamily}`;
+      widths = chars.map((c) => ctx.measureText(c).width);
+      total = widths.reduce((a, b) => a + b, 0) + Math.max(0, chars.length - 1) * letterGap;
+    }
     const textX = parseFloat(textXEl && textXEl.value) || 0;
     const textY = parseFloat(textYEl && textYEl.value) || 52;
     let x = (w - total) * 0.5 + (textX / 100) * w;
-    const y = getResponsiveTextY(textY, baseSize);
+    const y = getResponsiveTextY(textY, effectiveSize);
     const ghostSize = parseFloat(ghostSizeEl && ghostSizeEl.value) || 1;
     const palette = getEffectiveTintPalette();
     const ghostColor = palette.ghostColor;
@@ -1422,17 +1454,23 @@
     const ghostDecaySec = parseFloat(ghostDecayEl && ghostDecayEl.value) || 0.45;
     const ghostOpacity = parseFloat(ghostOpacityEl && ghostOpacityEl.value) || 1;
     const glowOpacity = parseFloat(glowOpacityEl && glowOpacityEl.value) || 1;
+    const ghostEnabled = ghostEnableEl ? ghostEnableEl.checked : true;
     const ghostFill = !!(ghostFillEl && ghostFillEl.checked);
     const textColor = (textColorEl && textColorEl.value) || "#ffffff";
+    const textRgb = hexToRgb(textColor);
     const outlineEnabled = !!(outlineEnableEl && outlineEnableEl.checked);
     const outlineColor = (outlineColorEl && outlineColorEl.value) || "#ffffff";
     const outlineThickness = parseFloat(outlineThicknessEl && outlineThicknessEl.value) || 0;
+    const bevelEnabled = !!(bevelEnableEl && bevelEnableEl.checked);
+    const bevelDepth = Math.max(0, parseFloat(bevelDepthEl && bevelDepthEl.value) || 0);
+    const bevelHighlight = Math.max(0, parseFloat(bevelHighlightEl && bevelHighlightEl.value) || 0);
+    const bevelShadow = Math.max(0, parseFloat(bevelShadowEl && bevelShadowEl.value) || 0);
     const decayFrames = Math.max(8, Math.min(180, Math.round(ghostDecaySec * 60)));
     const drawStep = Math.max(1, Math.floor(decayFrames / 22));
     const bandSpread = parseFloat(bandSpreadEl && bandSpreadEl.value) || 0.45;
 
     // Draw a subtle translucent bar behind the text and in front of the video.
-    const barH = Math.max(44, baseSize * 1.25);
+    const barH = Math.max(44, effectiveSize * 1.25);
     ctx.save();
     ctx.fillStyle = "rgba(0,0,0,0.34)";
     ctx.fillRect(0, y - barH * 0.5, w, barH);
@@ -1475,27 +1513,69 @@
       ctx.save();
       ctx.translate(x + widths[i] * 0.5, y);
       // White afterimage echoes from delayed stretch states.
-      for (let g = trail.length - 1; g >= 1; g -= drawStep) {
-        const ghostSy = trail[g];
-        const ghostAge = 1 - g / trail.length;
-        const ghostAlpha = (0.12 + lane * 0.16) * Math.pow(Math.max(0, ghostAge), 0.45) * ghostOpacity;
-        const ghostX = -vel * g * 18 * ghostSize;
-        const ghostY = g * 1.6 * ghostSize;
-        const ghostScale = ghostSize >= 1 ? 1 + (ghostSize - 1) * 0.7 : ghostSize;
-        ctx.save();
-        ctx.translate(ghostX, ghostY);
-        ctx.scale(sx * ghostScale, ghostSy * ghostScale);
-        ctx.strokeStyle = `rgba(${ghostRgb.r}, ${ghostRgb.g}, ${ghostRgb.b}, ${ghostAlpha})`;
-        ctx.lineWidth = (2 + snare * 2.4) * ghostSize;
-        ctx.strokeText(chars[i], -widths[i] * 0.5, 0);
-        if (ghostFill) {
-          ctx.fillStyle = `rgba(${ghostRgb.r}, ${ghostRgb.g}, ${ghostRgb.b}, ${ghostAlpha * 0.6})`;
-          ctx.fillText(chars[i], -widths[i] * 0.5, 0);
+      if (ghostEnabled) {
+        for (let g = trail.length - 1; g >= 1; g -= drawStep) {
+          const ghostSy = trail[g];
+          const ghostAge = 1 - g / trail.length;
+          const ghostAlpha = (0.12 + lane * 0.16) * Math.pow(Math.max(0, ghostAge), 0.45) * ghostOpacity;
+          const ghostX = -vel * g * 18 * ghostSize;
+          const ghostY = g * 1.6 * ghostSize;
+          const ghostScale = ghostSize >= 1 ? 1 + (ghostSize - 1) * 0.7 : ghostSize;
+          ctx.save();
+          ctx.translate(ghostX, ghostY);
+          ctx.scale(sx * ghostScale, ghostSy * ghostScale);
+          ctx.strokeStyle = `rgba(${ghostRgb.r}, ${ghostRgb.g}, ${ghostRgb.b}, ${ghostAlpha})`;
+          ctx.lineWidth = (2 + snare * 2.4) * ghostSize;
+          ctx.strokeText(chars[i], -widths[i] * 0.5, 0);
+          if (ghostFill) {
+            ctx.fillStyle = `rgba(${ghostRgb.r}, ${ghostRgb.g}, ${ghostRgb.b}, ${ghostAlpha * 0.6})`;
+            ctx.fillText(chars[i], -widths[i] * 0.5, 0);
+          }
+          ctx.restore();
         }
-        ctx.restore();
       }
 
       ctx.scale(sx, sy);
+      let faceFillStyle = textColor;
+      if (bevelEnabled && bevelDepth > 0) {
+        const depthPx = bevelDepth * (0.75 + lane * 0.55);
+        const hiAlpha = Math.min(1.5, bevelHighlight * (0.5 + vocal * 0.4));
+        const shAlpha = Math.min(1.5, bevelShadow * (0.5 + kick * 0.5));
+        const halfW = widths[i] * 0.5;
+        const lightDir = { x: -0.72, y: -0.68 };
+        const shadowDir = { x: 0.72, y: 0.68 };
+
+        const lightRgb = shadeRgb(textRgb, 0.64);
+        const midRgb = shadeRgb(textRgb, 0.16);
+        const darkRgb = shadeRgb(textRgb, -0.62);
+        const deepRgb = shadeRgb(textRgb, -0.8);
+
+        const faceGrad = ctx.createLinearGradient(
+          -halfW + lightDir.x * depthPx,
+          -effectiveSize * 0.55 + lightDir.y * depthPx,
+          halfW + shadowDir.x * depthPx,
+          effectiveSize * 0.55 + shadowDir.y * depthPx
+        );
+        faceGrad.addColorStop(0, rgbToCss(lightRgb, Math.min(1.3, 0.5 + hiAlpha * 0.65)));
+        faceGrad.addColorStop(0.35, rgbToCss(midRgb, 1));
+        faceGrad.addColorStop(0.62, rgbToCss(textRgb, 1));
+        faceGrad.addColorStop(1, rgbToCss(darkRgb, Math.min(1.2, 0.65 + shAlpha * 0.35)));
+        faceFillStyle = faceGrad;
+
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "rgba(0,0,0,0)";
+        // Keep bevel shaping centered on glyphs to avoid any behind-letter offset artifacts.
+        ctx.strokeStyle = rgbToCss(lightRgb, Math.min(1.2, 0.25 + hiAlpha * 0.45));
+        ctx.lineWidth = Math.max(0.7, 0.55 + depthPx * 0.26);
+        ctx.strokeText(chars[i], -halfW, 0);
+
+        ctx.strokeStyle = rgbToCss(darkRgb, Math.min(1.0, 0.18 + shAlpha * 0.3));
+        ctx.lineWidth = Math.max(0.6, 0.4 + depthPx * 0.18);
+        ctx.strokeText(chars[i], -halfW, 0);
+      }
+
       if (outlineEnabled && outlineThickness > 0) {
         ctx.strokeStyle = outlineColor;
         ctx.lineWidth = outlineThickness;
@@ -1512,7 +1592,7 @@
         ctx.strokeText(chars[i], -widths[i] * 0.5, 0);
       }
 
-      ctx.fillStyle = textColor;
+      ctx.fillStyle = faceFillStyle;
       ctx.fillText(chars[i], -widths[i] * 0.5, 0);
       ctx.restore();
 
@@ -1535,7 +1615,7 @@
       ctx.fill();
       ctx.restore();
 
-      x += widths[i] + 8;
+      x += widths[i] + letterGap;
     }
   }
 

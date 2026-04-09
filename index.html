@@ -7,18 +7,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bungee+Shade&family=Chicle&family=Monoton&family=Rubik+Glitch&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260408d" />
+  <link rel="stylesheet" href="style.css?v=20260409b" />
 </head>
 <body>
+  <div id="buildInfo" class="watermark">build: unknown</div>
   <div id="hud">
-    <div class="row top">
-      <div class="brand">Signal Design Lab // PSYCH BUILD</div>
-      <div id="buildInfo" class="build-badge">build: unknown</div>
-      <button id="playBtn" class="btn">Play</button>
-      <button id="pauseBtn" class="btn ghost">Pause</button>
-      <button id="togglePanelBtn" class="btn ghost">Collapse</button>
-    </div>
-
     <div class="row">
       <span class="label">Mode</span>
       <button class="chip active" data-mode="letters">Stretch Type</button>
@@ -31,17 +24,6 @@
       <select id="flowEffect">
         <option value="flow" selected>Flow Field</option>
         <option value="shockwaves">Beat Shockwaves</option>
-        <option value="ribbons">Ribbon Trails</option>
-        <option value="ink">Ink Diffusion</option>
-        <option value="lissajous">Lissajous Curves</option>
-        <option value="constellation">Constellation</option>
-        <option value="scanlines">Glitch Scanlines</option>
-        <option value="voronoi">Voronoi Blobs</option>
-        <option value="fog">Audio Fog</option>
-        <option value="refraction">Chromatic Refraction</option>
-        <option value="kaleidoscope">Kaleidoscope</option>
-        <option value="mesh">Wave Mesh</option>
-        <option value="caustics">Light Caustics</option>
       </select>
       <label class="label" for="flowEffectIntensity">Effect Intensity</label>
       <input id="flowEffectIntensity" type="range" min="0" max="2" step="0.02" value="1" />
@@ -52,6 +34,8 @@
         <option value="diamond">Diamond</option>
       </select>
     </div>
+
+    <div class="row section-title">Text</div>
 
     <div class="row">
       <label class="label" for="intensity">Intensity</label>
@@ -74,6 +58,14 @@
       <input id="textX" type="range" min="-50" max="50" step="1" value="0" />
       <label class="label" for="textY">Text Y</label>
       <input id="textY" type="range" min="20" max="80" step="1" value="52" />
+      <label class="label" for="bevelEnable">Bevel</label>
+      <input id="bevelEnable" type="checkbox" />
+      <label class="label" for="bevelDepth">Bevel Depth</label>
+      <input id="bevelDepth" type="range" min="0" max="18" step="0.5" value="4" />
+      <label class="label" for="bevelHighlight">Bevel Light</label>
+      <input id="bevelHighlight" type="range" min="0" max="1.5" step="0.02" value="0.7" />
+      <label class="label" for="bevelShadow">Bevel Shadow</label>
+      <input id="bevelShadow" type="range" min="0" max="1.5" step="0.02" value="0.65" />
       <button id="toggleGlowBtn" class="btn ghost">Glow On</button>
     </div>
 
@@ -120,9 +112,13 @@
       <input id="ghostOpacity" type="range" min="0" max="1.8" step="0.02" value="1" />
       <label class="label" for="glowOpacity">Glow Opacity</label>
       <input id="glowOpacity" type="range" min="0" max="1.8" step="0.02" value="1" />
+      <label class="label" for="ghostEnable">Ghost</label>
+      <input id="ghostEnable" type="checkbox" checked />
       <label class="label" for="ghostFill">Ghost Fill</label>
       <input id="ghostFill" type="checkbox" />
     </div>
+
+    <div class="row section-title">Border</div>
 
     <div class="row">
       <label class="label" for="borderWidth">Border Width</label>
@@ -186,11 +182,14 @@
   <canvas id="scene"></canvas>
   <div id="trackBar">
     <span class="label">Track</span>
+    <button id="playBtn" class="btn">Play</button>
+    <button id="pauseBtn" class="btn ghost">Pause</button>
     <button id="prevTrackBtn" class="btn ghost">Prev</button>
     <select id="trackSelect"></select>
     <button id="nextTrackBtn" class="btn ghost">Next</button>
+    <button id="togglePanelBtn" class="btn ghost">Collapse</button>
   </div>
   <audio id="audio" preload="auto" src="mod-demolition-live.mp3"></audio>
-  <script src="app.js?v=20260408j"></script>
+  <script src="app.js?v=20260409h"></script>
 </body>
 </html>
