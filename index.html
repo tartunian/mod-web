@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bungee+Shade&family=Chicle&family=Monoton&family=Rubik+Glitch&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260409b" />
+  <link rel="stylesheet" href="style.css?v=20260409d" />
 </head>
 <body>
   <div id="buildInfo" class="watermark">build: unknown</div>
@@ -24,14 +24,34 @@
       <select id="flowEffect">
         <option value="flow" selected>Flow Field</option>
         <option value="shockwaves">Beat Shockwaves</option>
+        <option value="sunburst">Rotating Sunburst</option>
       </select>
       <label class="label" for="flowEffectIntensity">Effect Intensity</label>
       <input id="flowEffectIntensity" type="range" min="0" max="2" step="0.02" value="1" />
+      <label class="label" for="flowEffectLoopEnable">Effect Loop</label>
+      <input id="flowEffectLoopEnable" type="checkbox" />
+      <label class="label" for="flowEffectLoopBars">Loop Bars</label>
+      <select id="flowEffectLoopBars">
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+        <option value="4">4</option>
+        <option value="8">8</option>
+      </select>
       <label class="label" for="flowShape">Flow Shape</label>
       <select id="flowShape">
         <option value="dot" selected>Dot</option>
         <option value="flower">Flower</option>
         <option value="diamond">Diamond</option>
+      </select>
+      <label class="label" for="sunburstSignal">Sunburst Signal</label>
+      <select id="sunburstSignal"></select>
+      <label class="label" for="sunburstFreqDiv">Sunburst Freq Div</label>
+      <select id="sunburstFreqDiv">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="4" selected>4</option>
+        <option value="8">8</option>
+        <option value="16">16</option>
       </select>
     </div>
 
@@ -190,6 +210,6 @@
     <button id="togglePanelBtn" class="btn ghost">Collapse</button>
   </div>
   <audio id="audio" preload="auto" src="mod-demolition-live.mp3"></audio>
-  <script src="app.js?v=20260409h"></script>
+  <script src="app.js?v=20260409w"></script>
 </body>
 </html>

@@ -67,11 +67,15 @@
   const flowOverlayOpacityEl = document.getElementById("flowOverlayOpacity");
   const flowEffectEl = document.getElementById("flowEffect");
   const flowEffectIntensityEl = document.getElementById("flowEffectIntensity");
+  const flowEffectLoopEnableEl = document.getElementById("flowEffectLoopEnable");
+  const flowEffectLoopBarsEl = document.getElementById("flowEffectLoopBars");
   const flowShapeEl = document.getElementById("flowShape");
+  const sunburstSignalEl = document.getElementById("sunburstSignal");
+  const sunburstFreqDivEl = document.getElementById("sunburstFreqDiv");
 
   const SETTINGS_KEY = "signal-design-lab-settings-v1";
-  const DEFAULT_SETTINGS_URL = "signal-settings-default.json?v=20260409a";
-  const BUILD_VERSION = "2026-04-09a";
+  const DEFAULT_SETTINGS_URL = "signal-settings-default.json?v=20260409b";
+  const BUILD_VERSION = "2026-04-09b";
   const FONT_FAMILIES = {
     bebas: '"Bebas Neue", "Arial Narrow", sans-serif',
     monoton: '"Monoton", "Trebuchet MS", sans-serif',
@@ -137,7 +141,11 @@
       flowOverlayOpacity: flowOverlayOpacityEl && flowOverlayOpacityEl.value,
       flowEffect: flowEffectEl && flowEffectEl.value,
       flowEffectIntensity: flowEffectIntensityEl && flowEffectIntensityEl.value,
+      flowEffectLoopEnable: flowEffectLoopEnableEl && flowEffectLoopEnableEl.checked,
+      flowEffectLoopBars: flowEffectLoopBarsEl && flowEffectLoopBarsEl.value,
       flowShape: flowShapeEl && flowShapeEl.value,
+      sunburstSignal: sunburstSignalEl && sunburstSignalEl.value,
+      sunburstFreqDiv: sunburstFreqDivEl && sunburstFreqDivEl.value,
       intensity: intensityEl && intensityEl.value,
       word: wordEl && wordEl.value,
       textColor: textColorEl && textColorEl.value,
@@ -228,7 +236,9 @@
       [flowOverlayOpacityEl, settings.flowOverlayOpacity],
       [flowEffectEl, settings.flowEffect],
       [flowEffectIntensityEl, settings.flowEffectIntensity],
+      [flowEffectLoopBarsEl, settings.flowEffectLoopBars],
       [flowShapeEl, settings.flowShape],
+      [sunburstFreqDivEl, settings.sunburstFreqDiv],
     ];
     for (const [el, value] of pairs) {
       if (!el || value === undefined || value === null) continue;
@@ -253,6 +263,10 @@
     if (flowOverlayEnableEl && typeof settings.flowOverlayEnable === "boolean") {
       flowOverlayEnableEl.checked = settings.flowOverlayEnable;
     }
+    if (flowEffectLoopEnableEl && typeof settings.flowEffectLoopEnable === "boolean") {
+      flowEffectLoopEnableEl.checked = settings.flowEffectLoopEnable;
+      syncFlowEffectLoopAnchor(true);
+    }
     if (masterTintEnableEl && typeof settings.masterTintEnable === "boolean") {
       masterTintEnableEl.checked = settings.masterTintEnable;
     }
@@ -274,6 +288,7 @@
     if (midSignalEl && settings.midSignal) setSelectValueOrFallback(midSignalEl, settings.midSignal);
     if (rightSignalEl && settings.rightSignal) setSelectValueOrFallback(rightSignalEl, settings.rightSignal);
     if (borderSignalEl && settings.borderSignal) setSelectValueOrFallback(borderSignalEl, settings.borderSignal);
+    if (sunburstSignalEl && settings.sunburstSignal) setSelectValueOrFallback(sunburstSignalEl, settings.sunburstSignal);
 
     if (showStatus) statusEl.textContent = "Settings loaded.";
   }
@@ -390,6 +405,22 @@
   if (masterTintEnableEl) {
     masterTintEnableEl.addEventListener("change", () => {
       if (masterTintEnableEl.checked) captureMasterTintBaseFromCurrent();
+    });
+  }
+
+  if (flowEffectLoopEnableEl) {
+    flowEffectLoopEnableEl.addEventListener("change", () => {
+      syncFlowEffectLoopAnchor(true);
+    });
+  }
+  if (flowEffectEl) {
+    flowEffectEl.addEventListener("change", () => {
+      syncFlowEffectLoopAnchor(true);
+    });
+  }
+  if (flowEffectLoopBarsEl) {
+    flowEffectLoopBarsEl.addEventListener("change", () => {
+      syncFlowEffectLoopAnchor(true);
     });
   }
 
@@ -512,6 +543,8 @@
     prevKick: 0,
     ribbons: [],
     inkBlobs: [],
+    flowEffectLoopAnchorEffect: "flow",
+    flowEffectLoopAnchorTime: 0,
     masterTintBase: null,
     loaded: false,
   };
@@ -525,6 +558,41 @@
       phase: i * 1.31,
       points: [],
     }));
+    syncFlowEffectLoopAnchor(true);
+  }
+
+  function getFlowEffectOptions() {
+    if (!flowEffectEl) return ["flow", "shockwaves", "sunburst"];
+    const values = Array.from(flowEffectEl.options || []).map((opt) => opt.value).filter(Boolean);
+    return values.length ? values : ["flow", "shockwaves", "sunburst"];
+  }
+
+  function syncFlowEffectLoopAnchor(resetTime = false) {
+    const options = getFlowEffectOptions();
+    const preferred = (flowEffectEl && flowEffectEl.value) || options[0] || "flow";
+    state.flowEffectLoopAnchorEffect = options.includes(preferred) ? preferred : options[0] || "flow";
+    if (resetTime) {
+      state.flowEffectLoopAnchorTime = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+    }
+  }
+
+  function getActiveFlowEffect(tNow) {
+    const options = getFlowEffectOptions();
+    const fallback = options[0] || "flow";
+    const manual = (flowEffectEl && flowEffectEl.value) || fallback;
+    if (!flowEffectLoopEnableEl || !flowEffectLoopEnableEl.checked || options.length < 2) {
+      if (state.flowEffectLoopAnchorEffect !== manual) syncFlowEffectLoopAnchor(true);
+      return manual;
+    }
+
+    const bpm = Math.max(60, Math.min(220, state.trackBpm || 120));
+    const bars = Math.max(1, Number.parseFloat(flowEffectLoopBarsEl && flowEffectLoopBarsEl.value) || 1);
+    const secondsPerBar = 240 / bpm;
+    const stepSeconds = Math.max(0.001, secondsPerBar * bars);
+    const baseIndex = Math.max(0, options.indexOf(state.flowEffectLoopAnchorEffect));
+    const elapsed = Math.max(0, tNow - (Number.isFinite(state.flowEffectLoopAnchorTime) ? state.flowEffectLoopAnchorTime : 0));
+    const step = Math.floor(elapsed / stepSeconds);
+    return options[(baseIndex + step) % options.length] || fallback;
   }
 
   let idxHint = 0;
@@ -597,18 +665,19 @@
   }
 
   function populateSignalSelects() {
-    if (!leftSignalEl || !midSignalEl || !rightSignalEl || !borderSignalEl) return;
+    if (!leftSignalEl || !midSignalEl || !rightSignalEl || !borderSignalEl || !sunburstSignalEl) return;
     const prev = {
       left: leftSignalEl.value,
       mid: midSignalEl.value,
       right: rightSignalEl.value,
       border: borderSignalEl.value,
+      sunburst: sunburstSignalEl.value,
     };
 
     const ids = Object.keys(state.signalLaneMap);
     ids.sort((a, b) => a.localeCompare(b));
 
-    const selects = [leftSignalEl, midSignalEl, rightSignalEl, borderSignalEl];
+    const selects = [leftSignalEl, midSignalEl, rightSignalEl, borderSignalEl, sunburstSignalEl];
     for (const selectEl of selects) {
       selectEl.innerHTML = "";
       for (const id of ids) {
@@ -624,6 +693,7 @@
       setSelectValueOrFallback(midSignalEl, prev.mid || "blended:snare");
       setSelectValueOrFallback(rightSignalEl, prev.right || "blended:hat");
       setSelectValueOrFallback(borderSignalEl, prev.border || "blended:melodic");
+      setSelectValueOrFallback(sunburstSignalEl, prev.sunburst || "blended:melodic");
     }
   }
 
@@ -1024,6 +1094,92 @@
     state.shockwaves = next;
   }
 
+  function drawSunburst(s, options = {}) {
+    ctx.save();
+    try {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
+
+      const opacity = Math.max(0, Math.min(1, options.opacity === undefined ? 1 : options.opacity));
+      const intensity = Math.max(0, Math.min(2, options.intensity === undefined ? 1 : options.intensity));
+      const drawBackdrop = options.drawBackdrop !== false;
+      const sunburstDrive = Math.max(0, Math.min(2, Number.isFinite(options.sunburstDrive) ? options.sunburstDrive : 0));
+      const kick = Math.max(0, Math.min(2, Number.isFinite(s.kick) ? s.kick : 0));
+      const bass = Math.max(0, Math.min(2, Number.isFinite(s.bass) ? s.bass : 0));
+      const melodic = Math.max(0, Math.min(2, Number.isFinite(s.melodic) ? s.melodic : 0));
+
+      if (drawBackdrop) {
+        ctx.fillStyle = `rgba(8,12,24,${0.04 * opacity})`;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // Fixed sun center.
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const t = (Number.isFinite(audio.currentTime) ? audio.currentTime : performance.now() * 0.001);
+      const bpm = Math.max(60, Math.min(220, state.trackBpm || 120));
+      const freqDiv = Math.max(1, Number.parseFloat(sunburstFreqDivEl && sunburstFreqDivEl.value) || 4);
+      const beatHz = bpm / (60 * freqDiv);
+      // Match border's primary computed beat phase exactly: t * beatHz * 2π.
+      const rot = t * beatHz * Math.PI * 2;
+
+      const rays = Math.max(20, Math.round(24 + intensity * 10));
+      const innerR = 18 + kick * 24;
+
+      function rayLengthToEdge(angle) {
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
+        const eps = 1e-6;
+        const tx = Math.abs(dx) < eps ? Infinity : (dx > 0 ? (w - cx) / dx : (0 - cx) / dx);
+        const ty = Math.abs(dy) < eps ? Infinity : (dy > 0 ? (h - cy) / dy : (0 - cy) / dy);
+        const d = Math.min(tx > 0 ? tx : Infinity, ty > 0 ? ty : Infinity);
+        return Number.isFinite(d) ? d : Math.max(w, h);
+      }
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      for (let i = 0; i < rays; i++) {
+        const p = i / rays;
+        const a = rot + p * Math.PI * 2;
+        const rayLen = Math.max(innerR + 8, rayLengthToEdge(a) + 4);
+        const spread = (Math.PI * 2 / rays) * 0.48;
+        const a0 = a - spread;
+        const a1 = a + spread;
+
+        const tipX = Math.cos(a) * rayLen;
+        const tipY = Math.sin(a) * rayLen;
+        const in0X = Math.cos(a0) * innerR;
+        const in0Y = Math.sin(a0) * innerR;
+        const in1X = Math.cos(a1) * innerR;
+        const in1Y = Math.sin(a1) * innerR;
+
+        const alpha = (0.08 + (0.12 + (bass * 0.55 + sunburstDrive * 0.45) * 0.08) * (0.5 + intensity * 0.5)) * opacity;
+        const col = `rgba(170,215,255,${Math.min(0.45, alpha)})`;
+
+        ctx.beginPath();
+        ctx.moveTo(in0X, in0Y);
+        ctx.lineTo(tipX, tipY);
+        ctx.lineTo(in1X, in1Y);
+        ctx.closePath();
+        ctx.fillStyle = col;
+        ctx.fill();
+      }
+      ctx.restore();
+
+      const coreR = innerR + 8 + (bass * 0.65 + sunburstDrive * 0.35) * 18;
+      const core = ctx.createRadialGradient(cx, cy, 2, cx, cy, coreR);
+      core.addColorStop(0, `rgba(255,245,210,${(0.25 + kick * 0.25) * opacity})`);
+      core.addColorStop(0.55, `rgba(255,190,120,${(0.12 + melodic * 0.12) * opacity})`);
+      core.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
+      ctx.fill();
+    } finally {
+      ctx.restore();
+    }
+  }
+
   function drawRibbons(s, options = {}) {
     const opacity = Math.max(0, Math.min(1, options.opacity === undefined ? 1 : options.opacity));
     const intensity = Math.max(0, Math.min(2, options.intensity === undefined ? 1 : options.intensity));
@@ -1379,8 +1535,9 @@
   function drawMotionEffect(s, options = {}) {
     const effectIntensity = Math.max(0, Math.min(2, parseFloat(flowEffectIntensityEl && flowEffectIntensityEl.value) || 1));
     const effectOptions = { ...options, intensity: effectIntensity };
-    const effect = (flowEffectEl && flowEffectEl.value) || "flow";
+    const effect = options.effect || (flowEffectEl && flowEffectEl.value) || "flow";
     if (effect === "shockwaves") drawShockwaves(s, effectOptions);
+    else if (effect === "sunburst") drawSunburst(s, effectOptions);
     else drawFlow(s, effectOptions);
   }
 
@@ -1425,7 +1582,8 @@
     const text = (wordEl.value || "MOD").toUpperCase().slice(0, 24);
     const chars = [...text];
     const textSize = parseFloat(textSizeEl && textSizeEl.value) || 1;
-    const baseSize = Math.max(36, Math.min(360, w * 0.09 * textSize));
+    const tinyScreenScale = w < 390 ? 0.88 : 1;
+    const baseSize = Math.max(30, Math.min(360, w * 0.09 * textSize * tinyScreenScale));
     const fontKey = (textFontEl && textFontEl.value) || "bebas";
     const fontFamily = FONT_FAMILIES[fontKey] || FONT_FAMILIES.bebas;
     let effectiveSize = baseSize;
@@ -1732,6 +1890,10 @@
   }
 
   function drawLavaBorders(s, t, signalDrive = 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+
     const borderWidth = parseFloat(borderWidthEl && borderWidthEl.value) || 1;
     const borderGain = Math.max(0, parseFloat(borderGainEl && borderGainEl.value) || 0);
     const borderOpacity = Math.max(0, parseFloat(borderOpacityEl && borderOpacityEl.value) || 0);
@@ -1756,6 +1918,9 @@
     const borderW = Math.max(24, Math.min(320, w * 0.1 * borderWidth));
     const amp = (8 + 52 * drive) * (0.45 + 0.55 * borderWidth);
     const step = 12;
+    const maxWave = 1.35; // |sin + harmonic*0.35| upper bound used in x excursion estimate.
+    const maxExcursion = borderW * 0.58 + maxWave * amp;
+    const clipPad = Math.max(32, Math.ceil(maxExcursion + 24));
 
     function drawSide(side) {
       const dir = side === "left" ? 1 : -1;
@@ -1764,10 +1929,10 @@
       ctx.save();
       if (side === "left") {
         ctx.beginPath();
-        ctx.rect(0, 0, borderW + 30, h);
+        ctx.rect(0, 0, clipPad, h);
       } else {
         ctx.beginPath();
-        ctx.rect(w - borderW - 30, 0, borderW + 30, h);
+        ctx.rect(w - clipPad, 0, clipPad, h);
       }
       ctx.clip();
 
@@ -1813,6 +1978,8 @@
 
     drawSide("left");
     drawSide("right");
+
+    ctx.restore();
   }
 
   function drawInstruments(t, intensity) {
@@ -2023,6 +2190,10 @@
     drawGlobalVideoTint();
 
     const t = audio.currentTime || 0;
+    const activeFlowEffect = getActiveFlowEffect(t);
+    if (flowEffectEl && flowEffectEl.value !== activeFlowEffect) {
+      flowEffectEl.value = activeFlowEffect;
+    }
     const intensity = parseFloat(intensityEl.value) || 1;
 
     const drumsStemLane = getStemLane("drums");
@@ -2051,10 +2222,12 @@
     const midLane = (midSignalEl && state.signalLaneMap[midSignalEl.value]) || state.blended.snare || [];
     const rightLane = (rightSignalEl && state.signalLaneMap[rightSignalEl.value]) || state.blended.hat || [];
     const borderLane = (borderSignalEl && state.signalLaneMap[borderSignalEl.value]) || state.blended.melodic || [];
+    const sunburstLane = (sunburstSignalEl && state.signalLaneMap[sunburstSignalEl.value]) || state.blended.melodic || [];
     const leftGain = parseFloat(leftGainEl && leftGainEl.value) || 1;
     const midGain = parseFloat(midGainEl && midGainEl.value) || 1;
     const rightGain = parseFloat(rightGainEl && rightGainEl.value) || 1;
     const borderDrive = sampleLane(t, borderLane) * intensity;
+    const sunburstDrive = sampleLane(t, sunburstLane) * intensity;
 
     // Stretch Type uses selectable left/mid/right lanes.
     const sLetters = {
@@ -2071,11 +2244,11 @@
       const flowOverlayEnabled = !!(flowOverlayEnableEl && flowOverlayEnableEl.checked);
       if (flowOverlayEnabled) {
         const flowOverlayOpacity = Math.max(0, Math.min(1, parseFloat(flowOverlayOpacityEl && flowOverlayOpacityEl.value) || 0));
-        drawMotionEffect(sStem, { opacity: flowOverlayOpacity, drawBackdrop: false });
+        drawMotionEffect(sStem, { opacity: flowOverlayOpacity, drawBackdrop: false, sunburstDrive, effect: activeFlowEffect });
       }
       drawLavaBorders(sLetters, t, borderDrive);
     } else {
-      drawMotionEffect(sStem, { opacity: 1, drawBackdrop: true });
+      drawMotionEffect(sStem, { opacity: 1, drawBackdrop: true, sunburstDrive, effect: activeFlowEffect });
       drawLavaBorders(sStem, t, borderDrive);
     }
 

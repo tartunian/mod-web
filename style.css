@@ -69,7 +69,7 @@ html, body {
 
 #hud {
   position: fixed;
-  left: 14px;
+  right: 14px;
   top: 14px;
   z-index: 3;
   max-width: min(94vw, 900px);
@@ -282,5 +282,27 @@ input[type="range"] {
     bottom: calc(58px + env(safe-area-inset-bottom));
     font-size: 9px;
     padding: 3px 7px;
+  }
+}
+
+@media (max-width: 390px) {
+  #trackBar {
+    gap: 6px;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  }
+
+  #trackBar .btn,
+  #trackBar .chip {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  #trackBar .label {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+
+  #trackBar select {
+    min-width: 160px;
   }
 }
