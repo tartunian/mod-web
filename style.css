@@ -99,6 +99,10 @@ html, body {
   top: 14px;
   z-index: 3;
   max-width: min(94vw, 900px);
+  max-height: calc(100vh - 96px - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -128,6 +132,38 @@ html, body {
   gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 8px;
+}
+
+.row.pair-grid {
+  display: grid;
+  grid-template-columns: max-content minmax(150px, 1fr) max-content minmax(150px, 1fr);
+  column-gap: 10px;
+  row-gap: 8px;
+  align-items: center;
+}
+
+.row.pair-grid > input[type="range"],
+.row.pair-grid > input[type="text"],
+.row.pair-grid > input[type="file"],
+.row.pair-grid > select {
+  width: 100%;
+  min-width: 0;
+}
+
+.row.pair-grid > input[type="checkbox"] {
+  width: auto;
+}
+
+.row.mode-grid .mode-chip-group {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.row + .row {
+  margin-top: 2px;
 }
 
 .row:last-child {
@@ -166,6 +202,16 @@ input[type="range"] {
 
 .btn.ghost {
   background: rgba(255, 255, 255, 0.02);
+}
+
+#togglePanelBtn {
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+#togglePanelBtn.menu-open {
+  background: rgba(255, 140, 66, 0.2);
+  border-color: rgba(255, 140, 66, 0.72);
+  color: #ffe8d5;
 }
 
 .chip.active {
@@ -262,6 +308,24 @@ input[type="range"] {
 }
 
 @media (max-width: 720px) {
+  .row.pair-grid {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .row.pair-grid > input[type="range"],
+  .row.pair-grid > input[type="text"],
+  .row.pair-grid > input[type="file"],
+  .row.pair-grid > select {
+    width: 140px;
+  }
+
+  .row.mode-grid .mode-chip-group {
+    width: 100%;
+  }
+
   #hud {
     left: 8px;
     top: 8px;

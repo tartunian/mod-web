@@ -253,7 +253,10 @@
   function applyPanelCollapsedState() {
     if (!hudEl) return;
     hudEl.classList.toggle("collapsed", panelCollapsed);
-    if (togglePanelBtn) togglePanelBtn.textContent = panelCollapsed ? "Expand" : "Collapse";
+    if (togglePanelBtn) {
+      togglePanelBtn.textContent = "Menu";
+      togglePanelBtn.classList.toggle("menu-open", !panelCollapsed);
+    }
     hudEl.style.display = panelCollapsed ? "none" : "block";
     if (!panelCollapsed) {
       const rows = Array.from(hudEl.querySelectorAll(".row"));
