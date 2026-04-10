@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bungee+Shade&family=Chicle&family=Monoton&family=Rubik+Glitch&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260409d" />
+  <link rel="stylesheet" href="style.css?v=20260409f" />
 </head>
 <body>
   <div id="buildInfo" class="watermark">build: unknown</div>
@@ -78,6 +78,8 @@
       <input id="textX" type="range" min="-50" max="50" step="1" value="0" />
       <label class="label" for="textY">Text Y</label>
       <input id="textY" type="range" min="20" max="80" step="1" value="52" />
+      <label class="label" for="textBottomLock">Bottom Lock</label>
+      <input id="textBottomLock" type="checkbox" />
       <label class="label" for="bevelEnable">Bevel</label>
       <input id="bevelEnable" type="checkbox" />
       <label class="label" for="bevelDepth">Bevel Depth</label>
@@ -119,6 +121,10 @@
       <input id="rightGain" type="range" min="0" max="3" step="0.05" value="1" />
       <label class="label" for="bandSpread">Band Spread</label>
       <input id="bandSpread" type="range" min="0.14" max="0.9" step="0.01" value="0.45" />
+      <label class="label" for="gainDampenerEnable">Gain Dampener</label>
+      <input id="gainDampenerEnable" type="checkbox" />
+      <label class="label" for="gainDampenerAmount">Damp Amount</label>
+      <input id="gainDampenerAmount" type="range" min="0" max="1" step="0.01" value="0" />
     </div>
 
     <div class="row">
@@ -200,6 +206,7 @@
 
   <video id="bgVideo" muted loop playsinline preload="metadata" src="mod-mansion.mp4"></video>
   <canvas id="scene"></canvas>
+  <div id="trackFadeOverlay"></div>
   <div id="trackBar">
     <span class="label">Track</span>
     <button id="playBtn" class="btn">Play</button>
@@ -210,6 +217,6 @@
     <button id="togglePanelBtn" class="btn ghost">Collapse</button>
   </div>
   <audio id="audio" preload="auto" src="mod-demolition-live.mp3"></audio>
-  <script src="app.js?v=20260409x"></script>
+  <script src="app.js?v=20260409az"></script>
 </body>
 </html>

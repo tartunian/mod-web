@@ -1,6 +1,7 @@
 (() => {
   const canvas = document.getElementById("scene");
   const ctx = canvas.getContext("2d");
+  const trackFadeOverlayEl = document.getElementById("trackFadeOverlay");
   const hudEl = document.getElementById("hud");
   const audio = document.getElementById("audio");
   const bgVideo = document.getElementById("bgVideo");
@@ -29,6 +30,7 @@
   const textSizeEl = document.getElementById("textSize");
   const textXEl = document.getElementById("textX");
   const textYEl = document.getElementById("textY");
+  const textBottomLockEl = document.getElementById("textBottomLock");
   const bevelEnableEl = document.getElementById("bevelEnable");
   const bevelDepthEl = document.getElementById("bevelDepth");
   const bevelHighlightEl = document.getElementById("bevelHighlight");
@@ -44,6 +46,8 @@
   const rightSignalEl = document.getElementById("rightSignal");
   const rightGainEl = document.getElementById("rightGain");
   const bandSpreadEl = document.getElementById("bandSpread");
+  const gainDampenerEnableEl = document.getElementById("gainDampenerEnable");
+  const gainDampenerAmountEl = document.getElementById("gainDampenerAmount");
   const ghostSizeEl = document.getElementById("ghostSize");
   const ghostColorEl = document.getElementById("ghostColor");
   const ghostDecayEl = document.getElementById("ghostDecay");
@@ -96,6 +100,143 @@
   let panelCollapsed = true;
   let glowEnabled = true;
   let defaultSettingsLoadPromise = null;
+  let audioFadeToken = 0;
+  let overlayFadeToken = 0;
+  let visualRestUntilMs = 0;
+  let visualRestReleaseUntilMs = 0;
+  let visualRestAnchorTime = 0;
+
+  if (audio) audio.volume = 1;
+
+  function applyTrackVisualBlend(blend) {
+    const b = Math.max(0, Math.min(1, Number.parseFloat(blend) || 0));
+    if (bgVideo) {
+      const sat = 1.05 - b * 0.28;
+      const con = 1.05 - b * 0.12;
+      const blur = b * 7;
+      const alpha = 0.72 - b * 0.2;
+      bgVideo.style.filter = `saturate(${sat}) contrast(${con}) blur(${blur.toFixed(2)}px)`;
+      bgVideo.style.opacity = alpha.toFixed(3);
+    }
+    if (canvas) {
+      const blur = b * 2.8;
+      const alpha = 1 - b * 0.24;
+      canvas.style.filter = `blur(${blur.toFixed(2)}px)`;
+      canvas.style.opacity = alpha.toFixed(3);
+    }
+    if (trackFadeOverlayEl) {
+      trackFadeOverlayEl.style.opacity = "0";
+    }
+  }
+
+  applyTrackVisualBlend(0);
+
+  function fadeAudioTo(target, durationMs = 300) {
+    if (!audio) return Promise.resolve();
+    const token = ++audioFadeToken;
+    const start = Number.isFinite(audio.volume) ? audio.volume : 1;
+    const end = Math.max(0, Math.min(1, Number.parseFloat(target) || 0));
+    const duration = Math.max(0, Number.parseFloat(durationMs) || 0);
+    if (duration <= 0.5) {
+      audio.volume = end;
+      return Promise.resolve();
+    }
+
+    const t0 = performance.now();
+    return new Promise((resolve) => {
+      function step(now) {
+        if (token !== audioFadeToken) {
+          resolve();
+          return;
+        }
+        const p = Math.max(0, Math.min(1, (now - t0) / duration));
+        const eased = p * p * (3 - 2 * p);
+        audio.volume = start + (end - start) * eased;
+        if (p < 1) {
+          requestAnimationFrame(step);
+        } else {
+          audio.volume = end;
+          resolve();
+        }
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  function fadeOverlayTo(target, durationMs = 300) {
+    if (!bgVideo && !canvas) return Promise.resolve();
+    const token = ++overlayFadeToken;
+    const start = Number.parseFloat((canvas && canvas.dataset.trackBlend) || "0") || 0;
+    const end = Math.max(0, Math.min(1, Number.parseFloat(target) || 0));
+    const duration = Math.max(0, Number.parseFloat(durationMs) || 0);
+    if (duration <= 0.5) {
+      if (canvas) canvas.dataset.trackBlend = String(end);
+      applyTrackVisualBlend(end);
+      return Promise.resolve();
+    }
+
+    const t0 = performance.now();
+    return new Promise((resolve) => {
+      function step(now) {
+        if (token !== overlayFadeToken) {
+          resolve();
+          return;
+        }
+        const p = Math.max(0, Math.min(1, (now - t0) / duration));
+        const eased = p * p * (3 - 2 * p);
+        const val = start + (end - start) * eased;
+        if (canvas) canvas.dataset.trackBlend = val.toFixed(3);
+        applyTrackVisualBlend(val);
+        if (p < 1) {
+          requestAnimationFrame(step);
+        } else {
+          if (canvas) canvas.dataset.trackBlend = String(end);
+          applyTrackVisualBlend(end);
+          resolve();
+        }
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  function waitMs(durationMs) {
+    const ms = Math.max(0, Number.parseFloat(durationMs) || 0);
+    if (ms <= 0) return Promise.resolve();
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function waitForAnimationFrame() {
+    return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+  }
+
+  function beginVisualRest(durationMs = 760) {
+    const now = performance.now();
+    visualRestUntilMs = Math.max(visualRestUntilMs, now + Math.max(0, Number.parseFloat(durationMs) || 0));
+    visualRestReleaseUntilMs = visualRestUntilMs;
+    visualRestAnchorTime = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+    applyTrackVisualBlend(0);
+  }
+  
+  function endVisualRest(tailMs = 0, releaseMs = 0) {
+    visualRestUntilMs = performance.now() + Math.max(0, Number.parseFloat(tailMs) || 0);
+    visualRestReleaseUntilMs = visualRestUntilMs + Math.max(0, Number.parseFloat(releaseMs) || 0);
+  }
+
+  function clearVisualRestNow() {
+    visualRestUntilMs = 0;
+    visualRestReleaseUntilMs = 0;
+    visualRestAnchorTime = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+  }
+
+  function getVisualStimulusScale(nowMs) {
+    if (nowMs < visualRestUntilMs) return 0;
+    if (nowMs < visualRestReleaseUntilMs) {
+      const p = (nowMs - visualRestUntilMs) / Math.max(1, visualRestReleaseUntilMs - visualRestUntilMs);
+      const clamped = Math.max(0, Math.min(1, p));
+      return clamped * clamped * (3 - 2 * clamped);
+    }
+    return 1;
+  }
 
   function setBuildInfo() {
     if (!buildInfoEl) return;
@@ -153,6 +294,7 @@
       textSize: textSizeEl && textSizeEl.value,
       textX: textXEl && textXEl.value,
       textY: textYEl && textYEl.value,
+      textBottomLock: textBottomLockEl && textBottomLockEl.checked,
       bevelEnable: bevelEnableEl && bevelEnableEl.checked,
       bevelDepth: bevelDepthEl && bevelDepthEl.value,
       bevelHighlight: bevelHighlightEl && bevelHighlightEl.value,
@@ -168,6 +310,8 @@
       rightSignal: rightSignalEl && rightSignalEl.value,
       rightGain: rightGainEl && rightGainEl.value,
       bandSpread: bandSpreadEl && bandSpreadEl.value,
+      gainDampenerEnable: gainDampenerEnableEl && gainDampenerEnableEl.checked,
+      gainDampenerAmount: gainDampenerAmountEl && gainDampenerAmountEl.value,
       ghostSize: ghostSizeEl && ghostSizeEl.value,
       ghostColor: ghostColorEl && ghostColorEl.value,
       ghostDecay: ghostDecayEl && ghostDecayEl.value,
@@ -219,6 +363,7 @@
       [midGainEl, settings.midGain],
       [rightGainEl, settings.rightGain],
       [bandSpreadEl, settings.bandSpread],
+      [gainDampenerAmountEl, settings.gainDampenerAmount],
       [ghostSizeEl, settings.ghostSize],
       [ghostColorEl, settings.ghostColor],
       [ghostDecayEl, settings.ghostDecay],
@@ -256,6 +401,12 @@
     }
     if (outlineEnableEl && typeof settings.outlineEnable === "boolean") {
       outlineEnableEl.checked = settings.outlineEnable;
+    }
+    if (textBottomLockEl && typeof settings.textBottomLock === "boolean") {
+      textBottomLockEl.checked = settings.textBottomLock;
+    }
+    if (gainDampenerEnableEl && typeof settings.gainDampenerEnable === "boolean") {
+      gainDampenerEnableEl.checked = settings.gainDampenerEnable;
     }
     if (bevelEnableEl && typeof settings.bevelEnable === "boolean") {
       bevelEnableEl.checked = settings.bevelEnable;
@@ -545,9 +696,8 @@
     inkBlobs: [],
     flowEffectLoopAnchorEffect: "flow",
     flowEffectLoopAnchorTime: 0,
-    flowEffectRenderCurrent: "flow",
-    flowEffectRenderPrev: null,
-    flowEffectTransitionStart: 0,
+    videoShiftSweepPhase: 0,
+    videoShiftSweepLastNow: null,
     masterTintBase: null,
     loaded: false,
   };
@@ -561,9 +711,6 @@
       phase: i * 1.31,
       points: [],
     }));
-    state.flowEffectRenderCurrent = (flowEffectEl && flowEffectEl.value) || state.flowEffectLoopAnchorEffect || "flow";
-    state.flowEffectRenderPrev = null;
-    state.flowEffectTransitionStart = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
     syncFlowEffectLoopAnchor(true);
   }
 
@@ -573,22 +720,24 @@
     return values.length ? values : ["flow", "shockwaves", "sunburst"];
   }
 
-  function syncFlowEffectLoopAnchor(resetTime = false) {
+  function syncFlowEffectLoopAnchor(resetTime = false, anchorTime = null) {
     const options = getFlowEffectOptions();
     const preferred = (flowEffectEl && flowEffectEl.value) || options[0] || "flow";
     state.flowEffectLoopAnchorEffect = options.includes(preferred) ? preferred : options[0] || "flow";
     if (resetTime) {
-      state.flowEffectLoopAnchorTime = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+      state.flowEffectLoopAnchorTime = Number.isFinite(anchorTime)
+        ? anchorTime
+        : (Number.isFinite(audio.currentTime) ? audio.currentTime : 0);
     }
   }
 
-  function getActiveFlowEffect(tNow) {
+  function getFlowEffectRenderPlan(tNow) {
     const options = getFlowEffectOptions();
     const fallback = options[0] || "flow";
     const manual = (flowEffectEl && flowEffectEl.value) || fallback;
     if (!flowEffectLoopEnableEl || !flowEffectLoopEnableEl.checked || options.length < 2) {
       if (state.flowEffectLoopAnchorEffect !== manual) syncFlowEffectLoopAnchor(true);
-      return manual;
+      return { effect: manual, fadeOutAlpha: 1 };
     }
 
     const bpm = Math.max(60, Math.min(220, state.trackBpm || 120));
@@ -598,7 +747,18 @@
     const baseIndex = Math.max(0, options.indexOf(state.flowEffectLoopAnchorEffect));
     const elapsed = Math.max(0, tNow - (Number.isFinite(state.flowEffectLoopAnchorTime) ? state.flowEffectLoopAnchorTime : 0));
     const step = Math.floor(elapsed / stepSeconds);
-    return options[(baseIndex + step) % options.length] || fallback;
+    const stepElapsed = elapsed - step * stepSeconds;
+    const effect = options[(baseIndex + step) % options.length] || fallback;
+    const fadeOutSeconds = Math.min(stepSeconds, Math.max(0.05, getBeatDurationSeconds()));
+    const fadeStart = Math.max(0, stepSeconds - fadeOutSeconds);
+
+    if (stepElapsed >= fadeStart) {
+      const progress = (stepElapsed - fadeStart) / Math.max(0.001, fadeOutSeconds);
+      const fadeOutAlpha = 1 - Math.max(0, Math.min(1, progress));
+      return { effect, fadeOutAlpha };
+    }
+
+    return { effect, fadeOutAlpha: 1 };
   }
 
   function getBeatDurationSeconds() {
@@ -606,65 +766,18 @@
     return 60 / bpm;
   }
 
-  function startFlowEffectTransition(nextEffect, tNow) {
-    if (!nextEffect) return;
-    const current = state.flowEffectRenderCurrent || nextEffect;
-    if (current === nextEffect) {
-      if (!state.flowEffectRenderCurrent) state.flowEffectRenderCurrent = nextEffect;
-      return;
-    }
-    state.flowEffectRenderPrev = current;
-    state.flowEffectRenderCurrent = nextEffect;
-    state.flowEffectTransitionStart = Number.isFinite(tNow) ? tNow : 0;
-  }
-
-  function drawMotionEffectWithTransition(s, options = {}, targetEffect, tNow) {
+  function drawMotionEffectWithTransition(s, options = {}, renderPlan) {
     const fallbackEffect = (flowEffectEl && flowEffectEl.value) || "flow";
-    const nextEffect = targetEffect || fallbackEffect;
-    if (!state.flowEffectRenderCurrent) state.flowEffectRenderCurrent = nextEffect;
-    if (nextEffect !== state.flowEffectRenderCurrent) {
-      startFlowEffectTransition(nextEffect, tNow);
-    }
-
-    const beatSeconds = Math.max(0.05, getBeatDurationSeconds());
-    const fadeOutSeconds = beatSeconds;
-    const fadeInSeconds = beatSeconds;
-    const transitionSeconds = fadeOutSeconds + fadeInSeconds;
-    const start = Number.isFinite(state.flowEffectTransitionStart) ? state.flowEffectTransitionStart : 0;
-    const elapsed = Math.max(0, (Number.isFinite(tNow) ? tNow : 0) - start);
+    const effect = (renderPlan && renderPlan.effect) || fallbackEffect;
+    const fadeOutAlpha = Math.max(0, Math.min(1, Number.isFinite(renderPlan && renderPlan.fadeOutAlpha) ? renderPlan.fadeOutAlpha : 1));
     const baseOpacity = Math.max(0, Math.min(1, options.opacity === undefined ? 1 : options.opacity));
+    const opacity = baseOpacity * fadeOutAlpha;
+    if (opacity <= 0.001) return;
 
-    if (state.flowEffectRenderPrev && elapsed < transitionSeconds) {
-      let outAlpha = 0;
-      let inAlpha = 0;
-      if (elapsed < fadeOutSeconds) {
-        outAlpha = 1 - (elapsed / Math.max(0.001, fadeOutSeconds));
-      } else {
-        inAlpha = (elapsed - fadeOutSeconds) / Math.max(0.001, fadeInSeconds);
-      }
-
-      if (outAlpha > 0.001) {
-        drawMotionEffect(s, {
-          ...options,
-          effect: state.flowEffectRenderPrev,
-          opacity: baseOpacity * Math.max(0, Math.min(1, outAlpha)),
-        });
-      }
-      if (inAlpha > 0.001) {
-        drawMotionEffect(s, {
-          ...options,
-          effect: state.flowEffectRenderCurrent,
-          opacity: baseOpacity * Math.max(0, Math.min(1, inAlpha)),
-        });
-      }
-      return;
-    }
-
-    state.flowEffectRenderPrev = null;
     drawMotionEffect(s, {
       ...options,
-      effect: state.flowEffectRenderCurrent || nextEffect,
-      opacity: baseOpacity,
+      effect,
+      opacity,
     });
   }
 
@@ -901,7 +1014,11 @@
   function getVideoShiftValue() {
     const fallback = Number.parseFloat(videoShiftEl && videoShiftEl.value) || 0;
     const sweepEnabled = !!(videoShiftSweepEnableEl && videoShiftSweepEnableEl.checked);
-    if (!sweepEnabled || !videoShiftEl) return fallback;
+    const now = performance.now() * 0.001;
+    if (!sweepEnabled || !videoShiftEl) {
+      state.videoShiftSweepLastNow = now;
+      return fallback;
+    }
 
     const min = Number.parseFloat(videoShiftEl.min);
     const max = Number.parseFloat(videoShiftEl.max);
@@ -910,8 +1027,11 @@
     const bpm = Math.max(60, Math.min(220, state.trackBpm || 120));
     const div = Math.max(1, Number.parseFloat(videoShiftSweepDivEl && videoShiftSweepDivEl.value) || 8);
     const hz = bpm / (60 * div);
-    const now = (audio && Number.isFinite(audio.currentTime)) ? audio.currentTime : performance.now() * 0.001;
-    const phase = now * hz * Math.PI * 2;
+    const prevNow = Number.isFinite(state.videoShiftSweepLastNow) ? state.videoShiftSweepLastNow : now;
+    const dt = Math.max(0, Math.min(0.25, now - prevNow));
+    state.videoShiftSweepLastNow = now;
+    state.videoShiftSweepPhase = (state.videoShiftSweepPhase || 0) + dt * hz * Math.PI * 2;
+    const phase = state.videoShiftSweepPhase;
     const normalized = 0.5 + 0.5 * Math.sin(phase);
     const sweepShift = min + (max - min) * normalized;
     videoShiftEl.value = sweepShift.toFixed(1);
@@ -1044,8 +1164,21 @@
 
     const token = ++state.trackLoadToken;
     const shouldAutoplay = opts.autoplay !== false;
-    state.loaded = false;
+    const isTrackSwitch = state.currentTrackIndex >= 0 && clamped !== state.currentTrackIndex;
+    const hadLoaded = state.loaded;
+    state.loaded = isTrackSwitch && hadLoaded;
     statusEl.textContent = `Loading ${normalizeTrackTitle(track, clamped)} ...`;
+
+    if (isTrackSwitch) {
+      beginVisualRest(60000);
+      await fadeAudioTo(0, 320);
+      if (token !== state.trackLoadToken) return;
+      // Ensure old track is fully silent before any new track playback can begin.
+      audio.pause();
+      audio.volume = 1;
+      // Cancel any stale volume tween loops from prior transitions.
+      audioFadeToken++;
+    }
 
     const audioUrl = resolveAssetUrl(track.audio);
     const trackSignalsUrl = track.signals ? resolveAssetUrl(track.signals) : "";
@@ -1080,6 +1213,8 @@
     } else {
       audio.currentTime = 0;
     }
+    // Anchor loop timing to track start so effect cycling stays in sync after track switches.
+    syncFlowEffectLoopAnchor(true, 0);
 
     state.currentTrackIndex = clamped;
     updateTrackControls();
@@ -1087,12 +1222,37 @@
 
     if (shouldAutoplay) {
       try {
+        if (isTrackSwitch) {
+          // Let visuals fully settle before starting the next track audio.
+          await waitMs(1000);
+          if (token !== state.trackLoadToken) return;
+          endVisualRest(0, 0);
+          // Ensure at least one visual frame is rendered post-rest before audio starts.
+          await waitForAnimationFrame();
+          if (token !== state.trackLoadToken) return;
+        }
+        if (isTrackSwitch) clearVisualRestNow();
+        audio.muted = false;
+        audio.volume = 1;
         await audio.play();
+        if (token !== state.trackLoadToken) return;
+        if (isTrackSwitch) clearVisualRestNow();
         playBgVideoSafely();
+        if (!isTrackSwitch) {
+          endVisualRest(0);
+          audio.volume = 1;
+        }
       } catch (_err) {
+        audio.volume = 1;
+        audio.muted = false;
+        endVisualRest(0);
         statusEl.textContent = `Loaded ${normalizeTrackTitle(track, clamped)}. Autoplay blocked by browser.${signalsStatusNote}`;
         return;
       }
+    } else {
+      audio.volume = 1;
+      audio.muted = false;
+      endVisualRest(0);
     }
 
     statusEl.textContent = `Loaded ${normalizeTrackTitle(track, clamped)}.${signalsStatusNote}`;
@@ -1696,6 +1856,7 @@
     const bevelDepth = Math.max(0, parseFloat(bevelDepthEl && bevelDepthEl.value) || 0);
     const bevelHighlight = Math.max(0, parseFloat(bevelHighlightEl && bevelHighlightEl.value) || 0);
     const bevelShadow = Math.max(0, parseFloat(bevelShadowEl && bevelShadowEl.value) || 0);
+    const textBottomLock = !!(textBottomLockEl && textBottomLockEl.checked);
     const decayFrames = Math.max(8, Math.min(180, Math.round(ghostDecaySec * 60)));
     const drawStep = Math.max(1, Math.floor(decayFrames / 22));
     const bandSpread = parseFloat(bandSpreadEl && bandSpreadEl.value) || 0.45;
@@ -1742,7 +1903,9 @@
       const vel = trail[0] - trail[1];
 
       ctx.save();
-      ctx.translate(x + widths[i] * 0.5, y);
+      // Keep the text bottom visually pinned while stretching vertically.
+      const bottomAnchorOffset = textBottomLock ? ((sy - 1) * effectiveSize * 0.5) : 0;
+      ctx.translate(x + widths[i] * 0.5, y - bottomAnchorOffset);
       // White afterimage echoes from delayed stretch states.
       if (ghostEnabled) {
         for (let g = trail.length - 1; g >= 1; g -= drawStep) {
@@ -1772,6 +1935,7 @@
         const depthPx = bevelDepth * (0.75 + lane * 0.55);
         const hiAlpha = Math.min(1.5, bevelHighlight * (0.5 + vocal * 0.4));
         const shAlpha = Math.min(1.5, bevelShadow * (0.5 + kick * 0.5));
+        const shadowDarkness = Math.max(0, Math.min(1, bevelShadow / 1.5));
         const halfW = widths[i] * 0.5;
         const lightDir = { x: -0.72, y: -0.68 };
         const shadowDir = { x: 0.72, y: 0.68 };
@@ -1779,7 +1943,8 @@
         const lightRgb = shadeRgb(textRgb, 0.64);
         const midRgb = shadeRgb(textRgb, 0.16);
         const darkRgb = shadeRgb(textRgb, -0.62);
-        const deepRgb = shadeRgb(textRgb, -0.8);
+        const innerRgb = shadeRgb(textRgb, -(0.12 + shadowDarkness * 0.52));
+        const deepRgb = shadeRgb(textRgb, -(0.38 + shadowDarkness * 0.54));
 
         const faceGrad = ctx.createLinearGradient(
           -halfW + lightDir.x * depthPx,
@@ -1789,8 +1954,8 @@
         );
         faceGrad.addColorStop(0, rgbToCss(lightRgb, Math.min(1.3, 0.5 + hiAlpha * 0.65)));
         faceGrad.addColorStop(0.35, rgbToCss(midRgb, 1));
-        faceGrad.addColorStop(0.62, rgbToCss(textRgb, 1));
-        faceGrad.addColorStop(1, rgbToCss(darkRgb, Math.min(1.2, 0.65 + shAlpha * 0.35)));
+        faceGrad.addColorStop(0.62, rgbToCss(innerRgb, 1));
+        faceGrad.addColorStop(1, rgbToCss(deepRgb, Math.min(1.2, 0.65 + shAlpha * 0.35)));
         faceFillStyle = faceGrad;
 
         ctx.lineJoin = "round";
@@ -1920,7 +2085,11 @@
         p.vy = Math.sin(a) * burst;
       }
 
-      const radius = Math.max(0.4, p.r + melodic * 2.6);
+      const maxDist = Math.max(1, Math.hypot(w, h) * 0.52);
+      const outward = Math.max(0, Math.min(1, (d - 12) / maxDist));
+      const radiusMin = 0.26 + p.r * 0.18;
+      const radiusMax = 1.1 + p.r * 1.4 + melodic * 2.6;
+      const radius = Math.max(0.3, radiusMin + (radiusMax - radiusMin) * outward);
       const alpha = Math.max(0.02, Math.min(1, (0.08 + kick * 0.35) * opacity));
       const r = 255;
       const g = 180 + Math.round(vocal * 60);
@@ -1984,7 +2153,7 @@
     const bpm = Math.max(60, Math.min(200, state.trackBpm || 120));
     const freqDiv = Math.max(1, Number.parseFloat(borderFreqDivEl && borderFreqDivEl.value) || 2);
     const beatHz = bpm / (60 * freqDiv);
-    const time = audio.currentTime || performance.now() * 0.001;
+    const time = Number.isFinite(t) ? t : (audio.currentTime || performance.now() * 0.001);
     const cycles = 2.4;
     const k = (Math.PI * 2 * cycles) / Math.max(1, h);
 
@@ -2258,16 +2427,33 @@
     requestAnimationFrame(frame);
     if (!state.loaded) return;
 
+    const nowMs = performance.now();
+    const t = audio.currentTime || 0;
+    const audioIsPlaying = !audio.paused && !audio.ended;
+    const stimulusScale = audioIsPlaying ? 1 : getVisualStimulusScale(nowMs);
+    const visualsResting = stimulusScale <= 0.001;
+    const renderTime = visualsResting
+      ? visualRestAnchorTime
+      : (visualRestAnchorTime + (t - visualRestAnchorTime) * stimulusScale);
+
     ctx.clearRect(0, 0, w, h);
     drawVideoBackground();
     drawGlobalVideoTint();
 
-    const t = audio.currentTime || 0;
-    const activeFlowEffect = getActiveFlowEffect(t);
-    if (flowEffectEl && flowEffectEl.value !== activeFlowEffect) {
-      flowEffectEl.value = activeFlowEffect;
+    const flowRenderPlan = visualsResting
+      ? { effect: (flowEffectEl && flowEffectEl.value) || "flow", fadeOutAlpha: 0 }
+      : (() => {
+        const planned = getFlowEffectRenderPlan(t);
+        return {
+          ...planned,
+          fadeOutAlpha: Math.max(0, Math.min(1, (planned && planned.fadeOutAlpha !== undefined ? planned.fadeOutAlpha : 1) * stimulusScale)),
+        };
+      })();
+    if (flowEffectEl && flowRenderPlan && flowEffectEl.value !== flowRenderPlan.effect) {
+      flowEffectEl.value = flowRenderPlan.effect;
     }
-    const intensity = parseFloat(intensityEl.value) || 1;
+    const baseIntensity = parseFloat(intensityEl.value) || 1;
+    const intensity = baseIntensity * stimulusScale;
 
     const drumsStemLane = getStemLane("drums");
     const bassStemLane = getStemLane("bass");
@@ -2296,9 +2482,12 @@
     const rightLane = (rightSignalEl && state.signalLaneMap[rightSignalEl.value]) || state.blended.hat || [];
     const borderLane = (borderSignalEl && state.signalLaneMap[borderSignalEl.value]) || state.blended.melodic || [];
     const sunburstLane = (sunburstSignalEl && state.signalLaneMap[sunburstSignalEl.value]) || state.blended.melodic || [];
-    const leftGain = parseFloat(leftGainEl && leftGainEl.value) || 1;
-    const midGain = parseFloat(midGainEl && midGainEl.value) || 1;
-    const rightGain = parseFloat(rightGainEl && rightGainEl.value) || 1;
+    const dampenerEnabled = !!(gainDampenerEnableEl && gainDampenerEnableEl.checked);
+    const dampenerAmount = Math.max(0, Math.min(1, parseFloat(gainDampenerAmountEl && gainDampenerAmountEl.value) || 0));
+    const dampenerMul = dampenerEnabled ? (1 - dampenerAmount) : 1;
+    const leftGain = (parseFloat(leftGainEl && leftGainEl.value) || 1) * dampenerMul;
+    const midGain = (parseFloat(midGainEl && midGainEl.value) || 1) * dampenerMul;
+    const rightGain = (parseFloat(rightGainEl && rightGainEl.value) || 1) * dampenerMul;
     const borderDrive = sampleLane(t, borderLane) * intensity;
     const sunburstDrive = sampleLane(t, sunburstLane) * intensity;
 
@@ -2316,13 +2505,13 @@
       drawLetters(sLetters);
       const flowOverlayEnabled = !!(flowOverlayEnableEl && flowOverlayEnableEl.checked);
       if (flowOverlayEnabled) {
-        const flowOverlayOpacity = Math.max(0, Math.min(1, parseFloat(flowOverlayOpacityEl && flowOverlayOpacityEl.value) || 0));
-        drawMotionEffectWithTransition(sStem, { opacity: flowOverlayOpacity, drawBackdrop: false, sunburstDrive }, activeFlowEffect, t);
+        const flowOverlayOpacity = Math.max(0, Math.min(1, parseFloat(flowOverlayOpacityEl && flowOverlayOpacityEl.value) || 0)) * stimulusScale;
+        drawMotionEffectWithTransition(sStem, { opacity: flowOverlayOpacity, drawBackdrop: false, sunburstDrive }, flowRenderPlan);
       }
-      drawLavaBorders(sLetters, t, borderDrive);
+      drawLavaBorders(sLetters, renderTime, borderDrive);
     } else {
-      drawMotionEffectWithTransition(sStem, { opacity: 1, drawBackdrop: true, sunburstDrive }, activeFlowEffect, t);
-      drawLavaBorders(sStem, t, borderDrive);
+      drawMotionEffectWithTransition(sStem, { opacity: stimulusScale, drawBackdrop: true, sunburstDrive }, flowRenderPlan);
+      drawLavaBorders(sStem, renderTime, borderDrive);
     }
 
     updateMeters(t);
