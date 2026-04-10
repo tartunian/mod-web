@@ -545,6 +545,9 @@
     inkBlobs: [],
     flowEffectLoopAnchorEffect: "flow",
     flowEffectLoopAnchorTime: 0,
+    flowEffectRenderCurrent: "flow",
+    flowEffectRenderPrev: null,
+    flowEffectTransitionStart: 0,
     masterTintBase: null,
     loaded: false,
   };
@@ -558,6 +561,9 @@
       phase: i * 1.31,
       points: [],
     }));
+    state.flowEffectRenderCurrent = (flowEffectEl && flowEffectEl.value) || state.flowEffectLoopAnchorEffect || "flow";
+    state.flowEffectRenderPrev = null;
+    state.flowEffectTransitionStart = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
     syncFlowEffectLoopAnchor(true);
   }
 
@@ -593,6 +599,73 @@
     const elapsed = Math.max(0, tNow - (Number.isFinite(state.flowEffectLoopAnchorTime) ? state.flowEffectLoopAnchorTime : 0));
     const step = Math.floor(elapsed / stepSeconds);
     return options[(baseIndex + step) % options.length] || fallback;
+  }
+
+  function getBeatDurationSeconds() {
+    const bpm = Math.max(60, Math.min(220, state.trackBpm || 120));
+    return 60 / bpm;
+  }
+
+  function startFlowEffectTransition(nextEffect, tNow) {
+    if (!nextEffect) return;
+    const current = state.flowEffectRenderCurrent || nextEffect;
+    if (current === nextEffect) {
+      if (!state.flowEffectRenderCurrent) state.flowEffectRenderCurrent = nextEffect;
+      return;
+    }
+    state.flowEffectRenderPrev = current;
+    state.flowEffectRenderCurrent = nextEffect;
+    state.flowEffectTransitionStart = Number.isFinite(tNow) ? tNow : 0;
+  }
+
+  function drawMotionEffectWithTransition(s, options = {}, targetEffect, tNow) {
+    const fallbackEffect = (flowEffectEl && flowEffectEl.value) || "flow";
+    const nextEffect = targetEffect || fallbackEffect;
+    if (!state.flowEffectRenderCurrent) state.flowEffectRenderCurrent = nextEffect;
+    if (nextEffect !== state.flowEffectRenderCurrent) {
+      startFlowEffectTransition(nextEffect, tNow);
+    }
+
+    const beatSeconds = Math.max(0.05, getBeatDurationSeconds());
+    const fadeOutSeconds = beatSeconds;
+    const fadeInSeconds = beatSeconds;
+    const transitionSeconds = fadeOutSeconds + fadeInSeconds;
+    const start = Number.isFinite(state.flowEffectTransitionStart) ? state.flowEffectTransitionStart : 0;
+    const elapsed = Math.max(0, (Number.isFinite(tNow) ? tNow : 0) - start);
+    const baseOpacity = Math.max(0, Math.min(1, options.opacity === undefined ? 1 : options.opacity));
+
+    if (state.flowEffectRenderPrev && elapsed < transitionSeconds) {
+      let outAlpha = 0;
+      let inAlpha = 0;
+      if (elapsed < fadeOutSeconds) {
+        outAlpha = 1 - (elapsed / Math.max(0.001, fadeOutSeconds));
+      } else {
+        inAlpha = (elapsed - fadeOutSeconds) / Math.max(0.001, fadeInSeconds);
+      }
+
+      if (outAlpha > 0.001) {
+        drawMotionEffect(s, {
+          ...options,
+          effect: state.flowEffectRenderPrev,
+          opacity: baseOpacity * Math.max(0, Math.min(1, outAlpha)),
+        });
+      }
+      if (inAlpha > 0.001) {
+        drawMotionEffect(s, {
+          ...options,
+          effect: state.flowEffectRenderCurrent,
+          opacity: baseOpacity * Math.max(0, Math.min(1, inAlpha)),
+        });
+      }
+      return;
+    }
+
+    state.flowEffectRenderPrev = null;
+    drawMotionEffect(s, {
+      ...options,
+      effect: state.flowEffectRenderCurrent || nextEffect,
+      opacity: baseOpacity,
+    });
   }
 
   let idxHint = 0;
@@ -2244,11 +2317,11 @@
       const flowOverlayEnabled = !!(flowOverlayEnableEl && flowOverlayEnableEl.checked);
       if (flowOverlayEnabled) {
         const flowOverlayOpacity = Math.max(0, Math.min(1, parseFloat(flowOverlayOpacityEl && flowOverlayOpacityEl.value) || 0));
-        drawMotionEffect(sStem, { opacity: flowOverlayOpacity, drawBackdrop: false, sunburstDrive, effect: activeFlowEffect });
+        drawMotionEffectWithTransition(sStem, { opacity: flowOverlayOpacity, drawBackdrop: false, sunburstDrive }, activeFlowEffect, t);
       }
       drawLavaBorders(sLetters, t, borderDrive);
     } else {
-      drawMotionEffect(sStem, { opacity: 1, drawBackdrop: true, sunburstDrive, effect: activeFlowEffect });
+      drawMotionEffectWithTransition(sStem, { opacity: 1, drawBackdrop: true, sunburstDrive }, activeFlowEffect, t);
       drawLavaBorders(sStem, t, borderDrive);
     }
 
