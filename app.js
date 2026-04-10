@@ -277,7 +277,6 @@
     };
     return {
       mode,
-      panelCollapsed,
       flowOverlayEnable: flowOverlayEnableEl && flowOverlayEnableEl.checked,
       flowOverlayOpacity: flowOverlayOpacityEl && flowOverlayOpacityEl.value,
       flowEffect: flowEffectEl && flowEffectEl.value,
@@ -341,11 +340,6 @@
     if (!settings || typeof settings !== "object") return;
 
     if (settings.mode) setMode(settings.mode);
-    if (typeof settings.panelCollapsed === "boolean") {
-      panelCollapsed = settings.panelCollapsed;
-      applyPanelCollapsedState();
-    }
-
     const pairs = [
       [intensityEl, settings.intensity],
       [wordEl, settings.word],

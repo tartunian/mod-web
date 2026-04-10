@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bungee+Shade&family=Chicle&family=Monoton&family=Rubik+Glitch&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260409f" />
+  <link rel="stylesheet" href="style.css?v=20260410a" />
 </head>
 <body>
   <div id="buildInfo" class="watermark">build: unknown</div>
@@ -207,12 +207,14 @@
   <video id="bgVideo" muted loop playsinline preload="metadata" src="mod-mansion.mp4"></video>
   <canvas id="scene"></canvas>
   <div id="trackFadeOverlay"></div>
-  <div id="trackBar">
+  <div id="trackPicker">
     <span class="label">Track</span>
+    <select id="trackSelect"></select>
+  </div>
+  <div id="trackBar">
     <button id="playBtn" class="btn">Play</button>
     <button id="pauseBtn" class="btn ghost">Pause</button>
     <button id="prevTrackBtn" class="btn ghost">Prev</button>
-    <select id="trackSelect"></select>
     <button id="nextTrackBtn" class="btn ghost">Next</button>
     <button id="togglePanelBtn" class="btn ghost">Collapse</button>
   </div>

@@ -72,7 +72,23 @@ html, body {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-#trackBar select {
+#trackPicker {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(56px + env(safe-area-inset-bottom));
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(6px);
+}
+
+#trackPicker select {
   min-width: 260px;
   max-width: min(70vw, 520px);
 }
@@ -283,7 +299,18 @@ input[type="range"] {
     gap: 8px;
   }
 
-  #trackBar select {
+  #trackPicker {
+    left: 8px;
+    right: 8px;
+    transform: none;
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    justify-content: flex-start;
+    overflow-x: auto;
+    white-space: nowrap;
+    gap: 8px;
+  }
+
+  #trackPicker select {
     min-width: 200px;
   }
 
@@ -312,7 +339,17 @@ input[type="range"] {
     letter-spacing: 0.06em;
   }
 
-  #trackBar select {
+  #trackPicker {
+    bottom: calc(58px + env(safe-area-inset-bottom));
+    padding: 6px 8px;
+  }
+
+  #trackPicker .label {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+
+  #trackPicker select {
     min-width: 160px;
   }
 }

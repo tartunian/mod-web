@@ -1,6 +1,6 @@
 {
   "mode": "letters",
-  "panelCollapsed": false,
+  "panelCollapsed": true,
   "flowOverlayEnable": true,
   "flowOverlayOpacity": "0.96",
   "flowEffect": "flow",
