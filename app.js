@@ -68,6 +68,32 @@
   const importSettingsFile = document.getElementById("importSettingsFile");
   const chips = Array.from(document.querySelectorAll(".chip"));
   const flowOverlayEnableEl = document.getElementById("flowOverlayEnable");
+  const kaleidoEnableEl = document.getElementById("kaleidoEnable");
+  const kaleidoSegmentsEl = document.getElementById("kaleidoSegments");
+    // --- Kaleidoscope Effect ---
+    function applyKaleidoscopeEffect(segments = 6) {
+      if (!segments || segments < 2) return;
+      const temp = document.createElement("canvas");
+      temp.width = w;
+      temp.height = h;
+      const tctx = temp.getContext("2d");
+      tctx.drawImage(canvas, 0, 0, w, h);
+      ctx.clearRect(0, 0, w, h);
+      const cx = w / 2, cy = h / 2, r = Math.max(w, h);
+      for (let i = 0; i < segments; i++) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate((2 * Math.PI * i) / segments);
+        if (i % 2) ctx.scale(1, -1); // mirror every other segment
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, r, (-(Math.PI / segments)), (Math.PI / segments));
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(temp, -cx, -cy, w, h);
+        ctx.restore();
+      }
+    }
   const flowOverlayOpacityEl = document.getElementById("flowOverlayOpacity");
   const flowEffectEl = document.getElementById("flowEffect");
   const flowEffectIntensityEl = document.getElementById("flowEffectIntensity");
@@ -2436,6 +2462,14 @@
     ctx.clearRect(0, 0, w, h);
     drawVideoBackground();
     drawGlobalVideoTint();
+    // Kaleidoscope effect (background/video only)
+    if (kaleidoEnableEl && kaleidoEnableEl.checked) {
+      let segs = 6;
+      if (kaleidoSegmentsEl) {
+        segs = Math.max(2, Math.min(16, parseInt(kaleidoSegmentsEl.value) || 6));
+      }
+      applyKaleidoscopeEffect(segs);
+    }
 
     const flowRenderPlan = visualsResting
       ? { effect: (flowEffectEl && flowEffectEl.value) || "flow", fadeOutAlpha: 0 }
@@ -2512,6 +2546,20 @@
     }
 
     updateMeters(t);
+  }
+
+  // --- Kaleidoscope UI state ---
+  if (kaleidoEnableEl && kaleidoSegmentsEl) {
+    // Restore from localStorage
+    const kEnabled = localStorage.getItem("kaleidoEnable") === "true";
+    kaleidoEnableEl.checked = kEnabled;
+    kaleidoSegmentsEl.value = localStorage.getItem("kaleidoSegments") || "6";
+    kaleidoEnableEl.addEventListener("change", () => {
+      localStorage.setItem("kaleidoEnable", kaleidoEnableEl.checked);
+    });
+    kaleidoSegmentsEl.addEventListener("change", () => {
+      localStorage.setItem("kaleidoSegments", kaleidoSegmentsEl.value);
+    });
   }
 
   fetch(playlistUrl)
